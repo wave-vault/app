@@ -59,16 +59,16 @@ export function AnimatedWaveBackground() {
       const width = window.innerWidth
       const height = window.innerHeight
       
-      // Colori per dark mode: onde blu notte, background nero/grigiastro
+      // Colori per dark mode: onde aqua/cyan più visibili
       const bgColor = isDark 
-        ? "#1a1a1a" // Nero grigiastro per dark mode
+        ? "#0a0a0f" // Nero bluastro molto scuro per dark mode
         : "transparent" // Trasparente per light mode (usa background CSS)
       
       const waveColor = isDark 
-        ? "rgba(13, 27, 42, 0.4)" // Blu notte scuro (#0d1b2a) per dark
+        ? "rgba(0, 217, 255, 0.35)" // Aqua/cyan più visibile per dark mode
         : "rgba(14, 165, 233, 0.25)" // Sky blue più evidente per light
       const patternColor = isDark
-        ? "rgba(27, 38, 59, 0.3)" // Blu notte medio (#1b263b) per pattern
+        ? "rgba(0, 191, 255, 0.25)" // Aqua più chiaro per pattern in dark mode
         : "rgba(14, 165, 233, 0.15)" // Pattern più evidente per light
 
       // Disegna background (solo in dark mode)
@@ -109,12 +109,12 @@ export function AnimatedWaveBackground() {
       ctx.lineTo(0, height)
       ctx.closePath()
 
-      // Gradiente - blu notte per dark mode, sky blue per light mode
+      // Gradiente - aqua/cyan per dark mode, sky blue per light mode
       const gradient = ctx.createLinearGradient(0, 0, 0, height)
       gradient.addColorStop(0, waveColor)
-      gradient.addColorStop(0.4, isDark ? "rgba(13, 27, 42, 0.3)" : "rgba(14, 165, 233, 0.18)")
-      gradient.addColorStop(0.7, isDark ? "rgba(13, 27, 42, 0.15)" : "rgba(14, 165, 233, 0.1)")
-      gradient.addColorStop(1, isDark ? "rgba(13, 27, 42, 0)" : "transparent")
+      gradient.addColorStop(0.4, isDark ? "rgba(0, 217, 255, 0.25)" : "rgba(14, 165, 233, 0.18)")
+      gradient.addColorStop(0.7, isDark ? "rgba(0, 191, 255, 0.15)" : "rgba(14, 165, 233, 0.1)")
+      gradient.addColorStop(1, isDark ? "rgba(0, 150, 200, 0.05)" : "transparent")
 
       ctx.fillStyle = gradient
       ctx.fill()
