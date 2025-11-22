@@ -137,7 +137,7 @@ export function VaultDetail() {
         whitelistedTokensMap.set(baseToken.address.toLowerCase(), {
           symbol: tokenlistToken?.symbol || baseToken.symbol,
           name: tokenlistToken?.name || baseToken.name,
-          logoUrl: tokenlistToken?.logoUrl || tokenlistToken?.logoURI || baseToken.logoURI || '',
+          logoUrl: tokenlistToken?.logoUrl || baseToken.logoURI || '',
         })
       })
 
@@ -151,7 +151,7 @@ export function VaultDetail() {
             ...token,
             symbol: whitelistedToken.symbol || token.symbol,
             name: whitelistedToken.name || token.name,
-            logoURI: whitelistedToken.logoUrl || token.logoURI || token.logoUrl,
+            logoURI: whitelistedToken.logoUrl || token.logoURI,
           }
         }
         
@@ -165,7 +165,7 @@ export function VaultDetail() {
             ...token,
             symbol: tokenlistToken.symbol || token.symbol,
             name: tokenlistToken.name || token.name,
-            logoURI: tokenlistToken.logoUrl || tokenlistToken.logoURI || token.logoURI || token.logoUrl,
+            logoURI: tokenlistToken.logoUrl || token.logoURI,
           }
         }
         
@@ -459,18 +459,22 @@ export function VaultDetail() {
               <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
             </TabsList>
             <TabsContent value="deposit">
-              <VaultActions
-                vault={vaultWithShares || vault}
-                mode="deposit"
-                availableTokens={depositTokens}
-              />
+              {vaultWithShares && (
+                <VaultActions
+                  vault={vaultWithShares}
+                  mode="deposit"
+                  availableTokens={depositTokens}
+                />
+              )}
             </TabsContent>
             <TabsContent value="withdraw">
-              <VaultActions
-                vault={vaultWithShares || vault}
-                mode="withdraw"
-                availableTokens={withdrawTokens}
-              />
+              {vaultWithShares && (
+                <VaultActions
+                  vault={vaultWithShares}
+                  mode="withdraw"
+                  availableTokens={withdrawTokens}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

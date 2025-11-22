@@ -11,18 +11,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useAccount, useReadContract } from "wagmi"
-import { formatUnits } from "viem"
 
 const VAULT_NAME_PREFIX = "ethGlobal - wave: "
 import { TrendingUp, TrendingDown, Minus, Filter, X } from "lucide-react"
-import { BASE_WHITELISTED_TOKENS, getBaseTokenByAddress } from "@/lib/constants/baseTokens"
+import { BASE_WHITELISTED_TOKENS } from "@/lib/constants/baseTokens"
 import { FactorTokenlist } from "@factordao/tokenlist"
 
 // ERC20 ABI for balanceOf
@@ -106,7 +103,7 @@ export function Vaults() {
         map.set(baseToken.address.toLowerCase(), {
           symbol: tokenlistToken?.symbol || baseToken.symbol,
           name: tokenlistToken?.name || baseToken.name,
-          logoUrl: tokenlistToken?.logoUrl || tokenlistToken?.logoURI || baseToken.logoURI || '',
+          logoUrl: tokenlistToken?.logoUrl || baseToken.logoURI || '',
           address: baseToken.address,
         })
       })
@@ -170,7 +167,7 @@ export function Vaults() {
               ...token,
               symbol: tokenlistToken.symbol || token.symbol,
               name: tokenlistToken.name || token.name,
-              logoUrl: tokenlistToken.logoUrl || tokenlistToken.logoURI || token.logoUrl,
+              logoUrl: tokenlistToken.logoUrl || token.logoUrl,
             }
           }
         } catch (error) {

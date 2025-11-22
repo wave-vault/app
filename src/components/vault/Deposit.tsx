@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAccount } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { Loader2, ArrowRightLeft } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Address, createPublicClient, erc20Abi, formatUnits, parseUnits, http, publicActions } from 'viem'
 import { base } from 'viem/chains'
 import { StudioProVault } from '@factordao/sdk-studio'
@@ -92,7 +91,6 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
       refreshBalance()
       setDepositAmount('')
     },
-    chainId: vault.chainId,
   })
 
   // Set initial token
