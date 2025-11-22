@@ -33,6 +33,19 @@ export function TechnicalArchitectureSection() {
                   ERC-20 shares represent proportional ownership with oracle-based valuation.
                 </p>
               </div>
+              <div className="pt-2 border-t border-border/30">
+                <p className="text-xs text-muted-foreground">
+                  Built with{" "}
+                  <a
+                    href="https://factor.studio"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-aqua-500 hover:text-aqua-400 underline transition-colors"
+                  >
+                    Factor Studio
+                  </a>
+                </p>
+              </div>
             </CardContent>
           </Card>
 

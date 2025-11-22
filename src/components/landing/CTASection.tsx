@@ -104,7 +104,7 @@ export function CTASection() {
               1inch Aqua Protocol
             </a>
             {" • "}
-            Powered by{" "}
+            Automated by{" "}
             <a
               href="https://chain.link"
               target="_blank"
@@ -112,6 +112,16 @@ export function CTASection() {
               className="text-aqua-500 hover:text-aqua-400 underline transition-colors"
             >
               Chainlink Oracles
+            </a>
+            {" • "}
+            Powered by{" "}
+            <a
+              href="https://factor.studio"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-aqua-500 hover:text-aqua-400 underline transition-colors"
+            >
+              Factor Studio
             </a>
             {" • "}
             <strong className="text-foreground">Permissionless</strong> &{" "}
