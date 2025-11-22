@@ -4,18 +4,16 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme/ThemeToggle"
 import { cn } from "@/lib/utils"
 import logoImage from "@/logo/logo.png"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useAccount } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
 
-const SCROLL_THRESHOLD = 10
-
 export function Header() {
   const location = useLocation()
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const [headerVisible, setHeaderVisible] = useState(true)
-  const lastScrollY = useRef(0)
+  const [isVisible, setIsVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
   const { isConnected } = useAccount()
   const { openConnectModal } = useConnectModal()
 
@@ -28,41 +26,32 @@ export function Header() {
     }
   }
 
-  // Hide header on scroll down for mobile
+  // Hide header on scroll down for mobile (same logic as footer)
   useEffect(() => {
     if (!isMobile) return
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY
 
-      if (Math.abs(currentScrollY - lastScrollY.current) < SCROLL_THRESHOLD) {
-        return // Ignore small scroll movements
+      // Show on scroll up, hide on scroll down (same logic as footer)
+      if (currentScrollY < lastScrollY || currentScrollY < 20) {
+        setIsVisible(true)
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false)
       }
 
-      const isScrollingDown = currentScrollY > lastScrollY.current
-
-      // Show/hide header based on scroll direction
-      if (isScrollingDown && headerVisible && currentScrollY > 60) {
-        setHeaderVisible(false)
-      } else if (!isScrollingDown && !headerVisible) {
-        setHeaderVisible(true)
-      }
-
-      lastScrollY.current = currentScrollY
+      setLastScrollY(currentScrollY)
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll)
-    }
-  }, [isMobile, headerVisible])
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [isMobile, lastScrollY])
 
   return (
     <div
       className={cn(
         "fixed top-0 left-0 right-0 z-[100] w-full border-b-2 border-aqua-500/60 dark:border-aqua-500/30 glass-apple backdrop-blur-xl bg-white/95 dark:bg-black/95 rounded-b-2xl transition-transform duration-300 shadow-lg",
-        !headerVisible && isMobile ? "-translate-y-full" : "translate-y-0"
+        isVisible || !isMobile ? "translate-y-0" : "-translate-y-full"
       )}
     >
       <header className="container mx-auto px-4 sm:px-6 lg:px-8">
