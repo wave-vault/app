@@ -829,9 +829,9 @@ export function Vaults() {
                     </div>
                 </CardHeader>
                   
-                  <CardContent className="space-y-3 flex-1 flex flex-col px-4 pb-3">
+                  <CardContent className="space-y-3 flex-1 flex flex-col px-3 pb-3">
                     {/* TVL and Performance - Side by Side */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2">
                       {/* TVL - Left */}
                     <div>
                         <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">TVL</p>
@@ -849,60 +849,60 @@ export function Vaults() {
                       
                       {/* Performance Metrics - Right */}
                       {(perf24h || perf7d || perf30d) && (
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">Performance</p>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex gap-0.5 flex-nowrap overflow-hidden">
                             {perf24h && (() => {
                               const Icon = perf24h.icon
                               return (
-                                <div className={`px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${
+                                <div className={`px-0.5 py-0.5 rounded-full border flex items-center gap-0.5 flex-shrink-0 ${
                                   perf24h.isPositive 
                                     ? "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400" 
                                     : perf24h.isNegative
                                     ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
                                     : "border-muted-foreground/30 bg-muted/50 text-foreground"
                                 }`}>
-                                  <Icon className={`w-2.5 h-2.5 ${perf24h.color}`} />
-                                  <span className={`text-[10px] font-bold ${perf24h.color}`}>
+                                  <Icon className={`w-1.5 h-1.5 ${perf24h.color}`} />
+                                  <span className={`text-[8px] font-bold ${perf24h.color}`}>
                                     {perf24h.isPositive ? '+' : ''}{perf24h.value}%
                                   </span>
-                                  <span className="text-[8px] opacity-75">24h</span>
+                                  <span className="text-[7px] opacity-75">24h</span>
                                 </div>
                               )
                             })()}
                             {perf7d && (() => {
                               const Icon = perf7d.icon
                               return (
-                                <div className={`px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${
+                                <div className={`px-0.5 py-0.5 rounded-full border flex items-center gap-0.5 flex-shrink-0 ${
                                   perf7d.isPositive 
                                     ? "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400" 
                                     : perf7d.isNegative
                                     ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
                                     : "border-muted-foreground/30 bg-muted/50 text-foreground"
                                 }`}>
-                                  <Icon className={`w-2.5 h-2.5 ${perf7d.color}`} />
-                                  <span className={`text-[10px] font-bold ${perf7d.color}`}>
+                                  <Icon className={`w-1.5 h-1.5 ${perf7d.color}`} />
+                                  <span className={`text-[8px] font-bold ${perf7d.color}`}>
                                     {perf7d.isPositive ? '+' : ''}{perf7d.value}%
                                   </span>
-                                  <span className="text-[8px] opacity-75">7d</span>
+                                  <span className="text-[7px] opacity-75">7d</span>
                                 </div>
                               )
                             })()}
                             {perf30d && (() => {
                               const Icon = perf30d.icon
                               return (
-                                <div className={`px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${
+                                <div className={`px-0.5 py-0.5 rounded-full border flex items-center gap-0.5 flex-shrink-0 ${
                                   perf30d.isPositive 
                                     ? "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400" 
                                     : perf30d.isNegative
                                     ? "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400"
                                     : "border-muted-foreground/30 bg-muted/50 text-foreground"
                                 }`}>
-                                  <Icon className={`w-2.5 h-2.5 ${perf30d.color}`} />
-                                  <span className={`text-[10px] font-bold ${perf30d.color}`}>
+                                  <Icon className={`w-1.5 h-1.5 ${perf30d.color}`} />
+                                  <span className={`text-[8px] font-bold ${perf30d.color}`}>
                                     {perf30d.isPositive ? '+' : ''}{perf30d.value}%
                                   </span>
-                                  <span className="text-[8px] opacity-75">30d</span>
+                                  <span className="text-[7px] opacity-75">30d</span>
                                 </div>
                               )
                             })()}
@@ -946,63 +946,67 @@ export function Vaults() {
                       </div>
                     )}
 
-                    {/* Pairs Section */}
-                    {vault.tokens && vault.tokens.length >= 2 && (
+                    {/* Aqua Pairs Section - From Subgraph */}
+                    {vault.aquaPairs && vault.aquaPairs.length > 0 && (
                       <div className="space-y-1.5">
                         <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
-                          Pairs ({Math.floor((vault.tokens.length * (vault.tokens.length - 1)) / 2)})
+                          Aqua Pairs ({vault.aquaPairs.length})
                         </p>
                         <div className="flex flex-wrap gap-1">
-                          {vault.tokens.map((tokenA, idxA) => 
-                            vault.tokens!.slice(idxA + 1).map((tokenB) => {
-                              const pairId = `${tokenA.address}-${tokenB.address}`
-                              return (
-                                <Badge 
-                                  key={pairId} 
-                                  variant="outline" 
-                                  className="flex items-center gap-1 px-1.5 py-0.5 text-xs hover:bg-accent/80 transition-colors"
-                                >
-                                  {/* Token A */}
-                                  {tokenA.logoUrl ? (
-                                    <img
-                                      src={tokenA.logoUrl}
-                                      alt={tokenA.symbol || 'Token A'}
-                                      className="w-3 h-3 rounded-full flex-shrink-0 object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none'
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-3 h-3 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                      <span className="text-[7px] font-bold text-muted-foreground">
-                                        {tokenA.symbol?.charAt(0)?.toUpperCase() || '?'}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <span className="font-medium text-xs">{tokenA.symbol || 'Unknown'}</span>
-                                  <span className="text-muted-foreground text-[10px]">/</span>
-                                  {/* Token B */}
-                                  {tokenB.logoUrl ? (
-                                    <img
-                                      src={tokenB.logoUrl}
-                                      alt={tokenB.symbol || 'Token B'}
-                                      className="w-3 h-3 rounded-full flex-shrink-0 object-cover"
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = 'none'
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-3 h-3 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                      <span className="text-[7px] font-bold text-muted-foreground">
-                                        {tokenB.symbol?.charAt(0)?.toUpperCase() || '?'}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <span className="font-medium text-xs">{tokenB.symbol || 'Unknown'}</span>
-                                </Badge>
-                              )
-                            })
-                          )}
+                          {vault.aquaPairs.map((pair) => {
+                            // Get token info from whitelistedTokensMap or vault tokens
+                            const token0 = whitelistedTokensMap.get(pair.token0.toLowerCase()) || 
+                              vault.tokens?.find(t => t.address.toLowerCase() === pair.token0.toLowerCase())
+                            const token1 = whitelistedTokensMap.get(pair.token1.toLowerCase()) || 
+                              vault.tokens?.find(t => t.address.toLowerCase() === pair.token1.toLowerCase())
+                            
+                            return (
+                              <Badge 
+                                key={pair.id} 
+                                variant="outline" 
+                                className="flex items-center gap-1 px-1.5 py-0.5 text-xs hover:bg-accent/80 transition-colors"
+                                title={`Fee: ${parseFloat(pair.feeBps) / 100}%`}
+                              >
+                                {/* Token 0 */}
+                                {token0?.logoUrl ? (
+                                  <img
+                                    src={token0.logoUrl}
+                                    alt={token0.symbol || 'Token 0'}
+                                    className="w-3 h-3 rounded-full flex-shrink-0 object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-3 h-3 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                    <span className="text-[7px] font-bold text-muted-foreground">?</span>
+                                  </div>
+                                )}
+                                <span className="font-medium text-xs">{token0?.symbol || pair.token0.slice(0, 6)}</span>
+                                <span className="text-muted-foreground text-[10px]">/</span>
+                                {/* Token 1 */}
+                                {token1?.logoUrl ? (
+                                  <img
+                                    src={token1.logoUrl}
+                                    alt={token1.symbol || 'Token 1'}
+                                    className="w-3 h-3 rounded-full flex-shrink-0 object-cover"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-3 h-3 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                    <span className="text-[7px] font-bold text-muted-foreground">?</span>
+                                  </div>
+                                )}
+                                <span className="font-medium text-xs">{token1?.symbol || pair.token1.slice(0, 6)}</span>
+                                {/* Fee badge */}
+                                <span className="text-[8px] text-muted-foreground ml-0.5">
+                                  ({parseFloat(pair.feeBps) / 100}%)
+                                </span>
+                              </Badge>
+                            )
+                          })}
                         </div>
                     </div>
                   )}

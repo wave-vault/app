@@ -56,6 +56,10 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
   const [balanceError, setBalanceError] = useState(false)
   const [depositEstimate, setDepositEstimate] = useState<StudioProVaultPreviewDespositResult | null>(null)
 
+  // useProVaultDeposit uses depositAssetAndExecute which automatically:
+  // 1. Deposits the user's tokens into the vault
+  // 2. Executes any configured deposit strategy (e.g., publishPairs for Aqua vaults)
+  // This ensures liquidity is updated on Aqua protocol after each deposit
   const {
     handleDepositWithApproval,
     isLoading,

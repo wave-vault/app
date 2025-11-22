@@ -349,63 +349,69 @@ export function VaultDetail() {
                 </div>
               </div>
               
-              {/* Pairs Section */}
-              {enrichedVault.tokens.length >= 2 && (
+              {/* Aqua Pairs Section - From Subgraph */}
+              {enrichedVault.aquaPairs && enrichedVault.aquaPairs.length > 0 && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">
-                    Pairs ({Math.floor((enrichedVault.tokens.length * (enrichedVault.tokens.length - 1)) / 2)})
+                    Aqua Pairs ({enrichedVault.aquaPairs.length})
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    {enrichedVault.tokens.map((tokenA, idxA) => 
-                      enrichedVault.tokens!.slice(idxA + 1).map((tokenB) => {
-                        const pairId = `${tokenA.address}-${tokenB.address}`
-                        return (
-                          <Badge 
-                            key={pairId} 
-                            variant="outline" 
-                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs hover:bg-accent/80 transition-colors"
-                          >
-                            {/* Token A */}
-                            {tokenA.logoURI ? (
-                              <img
-                                src={tokenA.logoURI}
-                                alt={tokenA.symbol || 'Token A'}
-                                className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none'
-                                }}
-                              />
-                            ) : (
-                              <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                <span className="text-[8px] font-bold text-muted-foreground">
-                                  {tokenA.symbol?.charAt(0)?.toUpperCase() || '?'}
-                                </span>
-                              </div>
-                            )}
-                            <span className="font-medium">{tokenA.symbol || 'Unknown'}</span>
-                            <span className="text-muted-foreground">/</span>
-                            {/* Token B */}
-                            {tokenB.logoURI ? (
-                              <img
-                                src={tokenB.logoURI}
-                                alt={tokenB.symbol || 'Token B'}
-                                className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none'
-                                }}
-                              />
-                            ) : (
-                              <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                <span className="text-[8px] font-bold text-muted-foreground">
-                                  {tokenB.symbol?.charAt(0)?.toUpperCase() || '?'}
-                                </span>
-                              </div>
-                            )}
-                            <span className="font-medium">{tokenB.symbol || 'Unknown'}</span>
-                          </Badge>
-                        )
-                      })
-                    )}
+                    {enrichedVault.aquaPairs.map((pair) => {
+                      // Find token info from vault tokens
+                      const token0 = enrichedVault.tokens?.find(
+                        t => t.address.toLowerCase() === pair.token0.toLowerCase()
+                      )
+                      const token1 = enrichedVault.tokens?.find(
+                        t => t.address.toLowerCase() === pair.token1.toLowerCase()
+                      )
+                      
+                      return (
+                        <Badge 
+                          key={pair.id} 
+                          variant="outline" 
+                          className="flex items-center gap-1.5 px-2.5 py-1 text-xs hover:bg-accent/80 transition-colors"
+                          title={`Pair Hash: ${pair.pairHash}\nFee: ${parseFloat(pair.feeBps) / 100}%\nTx: ${pair.txid}`}
+                        >
+                          {/* Token 0 */}
+                          {token0?.logoURI ? (
+                            <img
+                              src={token0.logoURI}
+                              alt={token0.symbol || 'Token 0'}
+                              className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] font-bold text-muted-foreground">?</span>
+                            </div>
+                          )}
+                          <span className="font-medium">{token0?.symbol || pair.token0.slice(0, 6)}</span>
+                          <span className="text-muted-foreground">/</span>
+                          {/* Token 1 */}
+                          {token1?.logoURI ? (
+                            <img
+                              src={token1.logoURI}
+                              alt={token1.symbol || 'Token 1'}
+                              className="w-4 h-4 rounded-full flex-shrink-0 object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <span className="text-[8px] font-bold text-muted-foreground">?</span>
+                            </div>
+                          )}
+                          <span className="font-medium">{token1?.symbol || pair.token1.slice(0, 6)}</span>
+                          {/* Fee display */}
+                          <span className="text-[10px] text-muted-foreground ml-1">
+                            ({parseFloat(pair.feeBps) / 100}%)
+                          </span>
+                        </Badge>
+                      )
+                    })}
                   </div>
                 </div>
               )}

@@ -1,11 +1,23 @@
 /**
- * Vault Service - Aggregates data from multiple Factor Studio Stats API endpoints
+ * Vault Service - Aggregates data from multiple sources:
+ * - Subgraph (Aqua pairs - source of truth for vault list)
+ * - Stats API (vault metrics and analytics)
  */
 
 const STATS_API_BASE_URL = import.meta.env.VITE_STATS_API_BASE_URL || ""
-const VAULT_NAME_PREFIX = "ethGlobal - wave: "
+const SUBGRAPH_URL = "https://api.goldsky.com/api/public/project_cmgzitcts001c5np28moc9lyy/subgraphs/onewave/backend-0.0.5/gn"
 
 // ==================== Type Definitions ====================
+
+export interface AquaPair {
+  id: string
+  txid: string
+  token0: string
+  token1: string
+  feeBps: string
+  vault: string
+  pairHash: string
+}
 
 export interface VaultToken {
   symbol: string
@@ -96,6 +108,9 @@ export interface AggregatedVault {
     deposits?: Record<string, VaultDeposit>
     fetchedAt?: number
   }
+  
+  // Aqua Protocol data (from subgraph)
+  aquaPairs?: AquaPair[]
 }
 
 interface ProVaultResponse {
@@ -180,6 +195,57 @@ function createTokenInfoMap(availableTokens: AvailableTokenResponse[]): Map<stri
 }
 
 // ==================== API Functions ====================
+
+/**
+ * Fetches Aqua pairs from subgraph - this is the source of truth for which vaults are active
+ */
+async function fetchAquaPairs(): Promise<AquaPair[]> {
+  try {
+    const query = `
+      {
+        aquaPairs {
+          id
+          txid
+          token0
+          token1
+          feeBps
+          vault
+          pairHash
+        }
+      }
+    `
+
+    const response = await fetch(SUBGRAPH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Subgraph HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.errors) {
+      console.error('[vaultService] Subgraph GraphQL errors:', data.errors)
+      return []
+    }
+
+    const pairs = data.data?.aquaPairs || []
+    console.log('[vaultService] Fetched Aqua pairs from subgraph:', {
+      count: pairs.length,
+      uniqueVaults: new Set(pairs.map((p: AquaPair) => p.vault.toLowerCase())).size,
+    })
+
+    return pairs
+  } catch (error) {
+    console.error('[vaultService] Error fetching aqua pairs from subgraph:', error)
+    return []
+  }
+}
 
 async function fetchProVaults(): Promise<ProVaultResponse[]> {
   if (!STATS_API_BASE_URL) {
@@ -284,21 +350,43 @@ function normalizeVaultAddress(vault: ProVaultResponse): string {
 }
 
 /**
- * Aggregates vault data from all available API endpoints
+ * Aggregates vault data from all available sources:
+ * 1. Subgraph (aqua pairs) - SOURCE OF TRUTH for vault list
+ * 2. Stats API (metrics and analytics)
  */
 export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
-  const [proVaults, availableTokens, strategies] = await Promise.all([
+  // Fetch subgraph pairs first - this determines which vaults we show
+  const [aquaPairs, proVaults, availableTokens, strategies] = await Promise.all([
+    fetchAquaPairs(),
     fetchProVaults(),
     fetchAvailableTokens(),
     fetchStrategies(),
   ])
 
   console.log('[vaultService] Fetched data:', {
+    aquaPairs: aquaPairs?.length || 0,
     proVaults: proVaults?.length || 0,
     availableTokens: availableTokens?.length || 0,
     strategies: strategies?.length || 0,
-    availableTokensType: typeof availableTokens,
-    availableTokensIsArray: Array.isArray(availableTokens),
+  })
+
+  // Extract unique vault addresses from subgraph pairs
+  const vaultAddressesFromSubgraph = new Set<string>()
+  const pairsByVault = new Map<string, AquaPair[]>()
+  
+  aquaPairs.forEach((pair) => {
+    const vaultAddress = pair.vault.toLowerCase()
+    vaultAddressesFromSubgraph.add(vaultAddress)
+    
+    if (!pairsByVault.has(vaultAddress)) {
+      pairsByVault.set(vaultAddress, [])
+    }
+    pairsByVault.get(vaultAddress)!.push(pair)
+  })
+
+  console.log('[vaultService] Vault addresses from subgraph:', {
+    count: vaultAddressesFromSubgraph.size,
+    addresses: Array.from(vaultAddressesFromSubgraph),
   })
 
   // Ensure availableTokens is an array
@@ -310,13 +398,16 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   // Create a map of vaults by address for quick lookup
   const vaultMap = new Map<string, AggregatedVault>()
 
-  // Process pro vaults (primary source)
-  const filteredProVaults = proVaults.filter((vault) => vault.name?.startsWith(VAULT_NAME_PREFIX))
-  console.log('[vaultService] Pro vaults filtered by prefix:', {
+  // Process pro vaults - FILTER BY SUBGRAPH ADDRESSES instead of name prefix
+  const filteredProVaults = proVaults.filter((vault) => {
+    const address = normalizeVaultAddress(vault)
+    return vaultAddressesFromSubgraph.has(address.toLowerCase())
+  })
+  
+  console.log('[vaultService] Pro vaults filtered by subgraph:', {
     total: proVaults.length,
     filtered: filteredProVaults.length,
-    prefix: VAULT_NAME_PREFIX,
-    sampleNames: proVaults.slice(0, 3).map(v => v.name),
+    matchedAddresses: filteredProVaults.map(v => normalizeVaultAddress(v)),
   })
 
   filteredProVaults.forEach((vault) => {
@@ -413,7 +504,11 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       // Extract APY
       const apy = extractAPY(vault.apy || vault.vaultAnalytics?.apy)
 
-      vaultMap.set(address.toLowerCase(), {
+      // Get Aqua pairs for this vault from subgraph
+      const addressLower = address.toLowerCase()
+      const aquaPairs = pairsByVault.get(addressLower) || []
+
+      vaultMap.set(addressLower, {
         address,
         name: vault.name,
         chainId,
@@ -437,13 +532,18 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
         managementFee: vault.managementFee,
         performanceFee: vault.performanceFee,
         vaultAnalytics: vault.vaultAnalytics,
+        aquaPairs, // Add Aqua pairs from subgraph
       })
     })
 
   // Enhance with data from available tokens (for metrics and additional token info)
+  // Only process strategies that match vault addresses from subgraph
   safeAvailableTokens.forEach((tokenData) => {
     tokenData.strategies
-      .filter((strategy) => strategy.name?.startsWith(VAULT_NAME_PREFIX))
+      .filter((strategy) => {
+        const address = strategy.vault_address?.toLowerCase()
+        return address && vaultAddressesFromSubgraph.has(address)
+      })
       .forEach((strategy) => {
         const address = strategy.vault_address?.toLowerCase()
         if (!address || !vaultMap.has(address)) return
@@ -498,8 +598,12 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   })
 
   // Enhance with data from strategies endpoint (fallback)
+  // Only process strategies that match vault addresses from subgraph
   strategies
-    .filter((strategy: any) => strategy.name?.startsWith(VAULT_NAME_PREFIX))
+    .filter((strategy: any) => {
+      const address = (strategy.vault_address || strategy.position_address)?.toLowerCase()
+      return address && vaultAddressesFromSubgraph.has(address)
+    })
     .forEach((strategy: any) => {
       const address = (strategy.vault_address || strategy.position_address)?.toLowerCase()
       if (!address) return
@@ -507,6 +611,8 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       if (!vaultMap.has(address)) {
         // Create new vault entry if it doesn't exist
         const chainId = normalizeChainId(strategy.chain)
+        const aquaPairs = pairsByVault.get(address) || []
+        
         vaultMap.set(address, {
           address: strategy.vault_address || strategy.position_address,
           name: strategy.name,
@@ -518,6 +624,7 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
           apy: extractAPY(strategy.metrics?.vault_analysis?.apy),
           tokens: extractTokensFromDeposits(strategy.metrics?.vault_analysis?.deposits),
           vaultAnalytics: strategy.metrics?.vault_analysis,
+          aquaPairs, // Add Aqua pairs from subgraph
         })
       } else {
         // Enhance existing vault
