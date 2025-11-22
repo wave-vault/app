@@ -41,7 +41,7 @@ function App() {
           <Route
             path="/vaults"
             element={
-              <MainLayout>
+              <MainLayout maxWidth="full">
                 <Vaults />
               </MainLayout>
             }

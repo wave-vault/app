@@ -221,12 +221,6 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
     },
   ]
 
-  const handleChainSwitch = () => {
-    if (targetChain) {
-      switchChain({ chainId: targetChain.id })
-    }
-  }
-
   const handleDeposit = async () => {
     if (!isConnected && openConnectModal) {
       openConnectModal()
@@ -340,22 +334,13 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
         />
       )}
 
-      {isWrongChain && (
-        <Button className="w-full h-10 rounded-full bg-accent" onClick={handleChainSwitch}>
-          <ArrowRightLeft size={16} className="mr-2" />
-          Switch to {targetChain?.name || 'Correct Chain'}
-        </Button>
-      )}
-
-      {!isWrongChain && (
-        <Button
-          className="w-full h-10 rounded-full bg-accent"
-          disabled={isLoading || !depositAmount || parseFloat(depositAmount) <= 0}
-          onClick={handleDeposit}
-        >
-          {isLoading ? <Loader2 className="animate-spin" size={16} /> : 'Deposit'}
-        </Button>
-      )}
+      <Button
+        className="w-full h-10 rounded-full bg-accent"
+        disabled={isLoading || !depositAmount || parseFloat(depositAmount) <= 0}
+        onClick={handleDeposit}
+      >
+        {isLoading ? <Loader2 className="animate-spin" size={16} /> : 'Deposit'}
+      </Button>
     </div>
   )
 }

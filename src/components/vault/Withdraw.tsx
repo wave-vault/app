@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAccount, useSwitchChain } from 'wagmi'
+import { useAccount } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { Loader2, ArrowRightLeft, Settings } from 'lucide-react'
+import { Loader2, Settings } from 'lucide-react'
 import { Address, formatUnits, parseUnits } from 'viem'
-import { base, arbitrum } from 'viem/chains'
+import { base } from 'viem/chains'
 import { StudioProVault } from '@factordao/sdk-studio'
 import { StudioProVaultPreviewWithdrawResult } from '@factordao/sdk-studio/types/studio-pro/modules/withdraw-module'
 import { useProVaultWithdraw } from '@/hooks/useProVaultWithdraw'
@@ -15,7 +15,7 @@ import { ActionPreview } from './ActionPreview'
 import { PercentageSelector } from './PercentageSelector'
 import { WalletBalance } from './WalletBalance'
 import { environment } from '@/lib/constants/dev'
-import { getRpcUrlForChain } from '@/lib/constants/rpc'
+import { getBaseRpcUrl } from '@/lib/constants/rpc'
 import { useRef } from 'react'
 
 interface Token {
@@ -67,8 +67,7 @@ const formatUsdCompact = (value: number): string => {
 }
 
 export function Withdraw({ vault, availableTokens }: WithdrawProps) {
-  const { address, chainId } = useAccount()
-  const { switchChain } = useSwitchChain()
+  const { address } = useAccount()
   const { openConnectModal } = useConnectModal()
   const [withdrawAmount, setWithdrawAmount] = useState('')
   const [token, setToken] = useState<Token | undefined>(availableTokens[0])
@@ -92,17 +91,6 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     }
   }, [showSlippageSettings])
 
-  const isWrongChain =
-    vault.chainId !== undefined &&
-    chainId !== undefined &&
-    Number(vault.chainId) !== Number(chainId)
-
-  const targetChain = useMemo(() => {
-    if (vault.chainId === base.id) return base
-    if (vault.chainId === arbitrum.id) return arbitrum
-    return base
-  }, [vault.chainId])
-
   const { handleWithdraw: onWithdraw, isWaitingForWithdraw } = useProVaultWithdraw({
     vaultAddress: vault.address as Address,
     tokenAddress: token?.address as Address,
@@ -110,7 +98,6 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     depositorAddress: address as Address,
     receiverAddress: address as Address,
     slippageTolerance: slippage,
-    chainId: vault.chainId,
   })
 
   const [withdrawEstimate, setWithdrawEstimate] = useState<StudioProVaultPreviewWithdrawResult | null>(null)
@@ -146,13 +133,13 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
   }, [vault.userShares?.sharesRaw])
 
   const handlePreviewWithdraw = useCallback(async () => {
-    if (!token || !vault.chainId || !withdrawAmount || parseFloat(withdrawAmount) <= 0) return null
+    if (!token || !withdrawAmount || parseFloat(withdrawAmount) <= 0) return null
     try {
       const proVault = new StudioProVault({
-        chainId: vault.chainId,
+        chainId: 8453, // BASE
         vaultAddress: vault.address as Address,
         environment: environment,
-        jsonRpcUrl: getRpcUrlForChain(vault.chainId),
+        jsonRpcUrl: getBaseRpcUrl(),
       })
       const withdrawEstimate = await proVault.previewWithdraw({
         assetAddress: token.address as Address,
@@ -162,7 +149,7 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     } catch (error) {
       return null
     }
-  }, [token, vault.chainId, withdrawAmount, denominatorDecimals, vault.address])
+  }, [token, withdrawAmount, denominatorDecimals, vault.address])
 
   // Debounced withdraw estimate
   useEffect(() => {
@@ -198,12 +185,6 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
   const handleSlippageChange = (value: string) => {
     if (/^\d*\.?\d*$/.test(value)) {
       setSlippage(value)
-    }
-  }
-
-  const handleChainSwitch = () => {
-    if (targetChain) {
-      switchChain({ chainId: targetChain.id })
     }
   }
 
@@ -361,27 +342,18 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
         />
       )}
 
-      {isWrongChain && (
-        <Button className="w-full h-10 rounded-full bg-accent" onClick={handleChainSwitch}>
-          <ArrowRightLeft size={16} className="mr-2" />
-          Switch to {targetChain?.name || 'Correct Chain'}
-        </Button>
-      )}
-
-      {!isWrongChain && (
-        <Button
-          className="w-full h-10 rounded-full bg-accent"
-          disabled={
-            isWaitingForWithdraw ||
-            !withdrawAmount ||
-            parseFloat(withdrawAmount) <= 0 ||
-            insufficientShares
-          }
-          onClick={handleWithdraw}
-        >
-          {isWaitingForWithdraw ? <Loader2 className="animate-spin" size={16} /> : 'Withdraw'}
-        </Button>
-      )}
+      <Button
+        className="w-full h-10 rounded-full bg-accent"
+        disabled={
+          isWaitingForWithdraw ||
+          !withdrawAmount ||
+          parseFloat(withdrawAmount) <= 0 ||
+          insufficientShares
+        }
+        onClick={handleWithdraw}
+      >
+        {isWaitingForWithdraw ? <Loader2 className="animate-spin" size={16} /> : 'Withdraw'}
+      </Button>
 
       {insufficientShares && (
         <p className="text-sm text-red-500">Insufficient shares for withdraw</p>

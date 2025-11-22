@@ -5,16 +5,17 @@ import { AnimatedWaveBackground } from "../landing/AnimatedWaveBackground"
 
 interface MainLayoutProps {
   children: React.ReactNode
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "full"
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout({ children, maxWidth = "2xl" }: MainLayoutProps) {
   return (
     <div className="min-h-screen relative overflow-hidden pb-20 md:pb-0">
       <AnimatedWaveBackground />
       <Header />
       <div className="relative z-10">
         <main className="py-8 pb-20 md:pb-8">
-          <Container maxWidth="2xl">
+          <Container maxWidth={maxWidth}>
             {children}
           </Container>
         </main>

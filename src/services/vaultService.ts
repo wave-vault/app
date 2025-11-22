@@ -88,6 +88,7 @@ export interface AggregatedVault {
   depositFee?: string
   withdrawFee?: string
   managementFee?: string
+  performanceFee?: string
   
   // Vault analytics
   vaultAnalytics?: {
@@ -122,6 +123,7 @@ interface ProVaultResponse {
   depositFee?: string
   withdrawFee?: string
   managementFee?: string
+  performanceFee?: string
   vaultAnalytics?: {
     apy?: VaultAPY
     deposits?: Record<string, VaultDeposit>
@@ -208,7 +210,13 @@ async function fetchAvailableTokens(): Promise<AvailableTokenResponse[]> {
     if (!response.ok) {
       throw new Error(`Failed to fetch available tokens: ${response.statusText}`)
     }
-    return await response.json()
+    const data = await response.json()
+    // Ensure we return an array
+    if (!Array.isArray(data)) {
+      console.warn('[vaultService] available-tokens API did not return an array:', typeof data, data)
+      return []
+    }
+    return data
   } catch (error) {
     console.error("Error fetching available tokens:", error)
     return []
@@ -263,13 +271,12 @@ function extractAPY(apy?: VaultAPY | number): number | undefined {
   return undefined
 }
 
+// BASE chain ID constant
+const BASE_CHAIN_ID = 8453
+
 function normalizeChainId(chain: string | number | undefined): number {
-  if (typeof chain === "number") return chain
-  if (typeof chain === "string") {
-    const parsed = parseInt(chain)
-    return isNaN(parsed) ? 8453 : parsed // Default to BASE
-  }
-  return 8453
+  // Always return BASE chain ID
+  return BASE_CHAIN_ID
 }
 
 function normalizeVaultAddress(vault: ProVaultResponse): string {
@@ -286,16 +293,33 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
     fetchStrategies(),
   ])
 
+  console.log('[vaultService] Fetched data:', {
+    proVaults: proVaults?.length || 0,
+    availableTokens: availableTokens?.length || 0,
+    strategies: strategies?.length || 0,
+    availableTokensType: typeof availableTokens,
+    availableTokensIsArray: Array.isArray(availableTokens),
+  })
+
+  // Ensure availableTokens is an array
+  const safeAvailableTokens = Array.isArray(availableTokens) ? availableTokens : []
+
   // Create token info map from available-tokens for quick lookup
-  const tokenInfoMap = createTokenInfoMap(availableTokens)
+  const tokenInfoMap = createTokenInfoMap(safeAvailableTokens)
 
   // Create a map of vaults by address for quick lookup
   const vaultMap = new Map<string, AggregatedVault>()
 
   // Process pro vaults (primary source)
-  proVaults
-    .filter((vault) => vault.name?.startsWith(VAULT_NAME_PREFIX))
-    .forEach((vault) => {
+  const filteredProVaults = proVaults.filter((vault) => vault.name?.startsWith(VAULT_NAME_PREFIX))
+  console.log('[vaultService] Pro vaults filtered by prefix:', {
+    total: proVaults.length,
+    filtered: filteredProVaults.length,
+    prefix: VAULT_NAME_PREFIX,
+    sampleNames: proVaults.slice(0, 3).map(v => v.name),
+  })
+
+  filteredProVaults.forEach((vault) => {
       const address = normalizeVaultAddress(vault)
       if (!address) return
 
@@ -411,12 +435,13 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
         depositFee: vault.depositFee,
         withdrawFee: vault.withdrawFee,
         managementFee: vault.managementFee,
+        performanceFee: vault.performanceFee,
         vaultAnalytics: vault.vaultAnalytics,
       })
     })
 
   // Enhance with data from available tokens (for metrics and additional token info)
-  availableTokens.forEach((tokenData) => {
+  safeAvailableTokens.forEach((tokenData) => {
     tokenData.strategies
       .filter((strategy) => strategy.name?.startsWith(VAULT_NAME_PREFIX))
       .forEach((strategy) => {
@@ -517,7 +542,14 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       }
     })
 
-  return Array.from(vaultMap.values())
+  const result = Array.from(vaultMap.values())
+  console.log('[vaultService] Final aggregated vaults:', {
+    count: result.length,
+    addresses: result.map(v => v.address),
+    names: result.map(v => v.name),
+  })
+
+  return result
 }
 
 /**
