@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useReadContract } from "wagmi"
 import { formatUnits } from "viem"
 import { cn } from "@/lib/utils"
@@ -19,6 +19,7 @@ interface TokenBalanceProps {
   decimals?: number
   userAddress: string | undefined
   onAmountSelect: (amount: string) => void
+  onBalanceChange?: (balance: string) => void
   className?: string
 }
 
@@ -27,6 +28,7 @@ export function TokenBalance({
   decimals = 18,
   userAddress,
   onAmountSelect,
+  onBalanceChange,
   className,
 }: TokenBalanceProps) {
   const [isHovered, setIsHovered] = useState(false)
@@ -51,6 +53,15 @@ export function TokenBalance({
         minimumFractionDigits: 0,
       })
     : "0"
+
+  // Notify parent of balance change
+  useEffect(() => {
+    if (onBalanceChange && formattedBalance > 0) {
+      onBalanceChange(formattedBalance.toString())
+    } else if (onBalanceChange && formattedBalance === 0) {
+      onBalanceChange("0")
+    }
+  }, [formattedBalance, onBalanceChange])
 
   const handlePercentClick = (percent: number) => {
     const amount = (formattedBalance * percent).toString()

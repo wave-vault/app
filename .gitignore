@@ -1,3 +1,20 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Testing
+coverage
+*.lcov
+.nyc_output
+
+# Production
+dist
+dist-ssr
+build
+*.local
+
 # Logs
 logs
 *.log
@@ -7,15 +24,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 .idea
+*.swp
+*.swo
+*~
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,4 +49,46 @@ dist-ssr
 *.sln
 *.sw?
 
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
 
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vite
+.vite
+vite.config.*.timestamp-*
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+.turbo
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Package manager lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Optional: Keep .env.example for reference
+!.env.example
+
+# Optional: Keep references directory if needed for documentation
+# Uncomment if you want to ignore the references directory
+# references/

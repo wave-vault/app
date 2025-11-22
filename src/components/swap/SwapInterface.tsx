@@ -13,6 +13,8 @@ export function SwapInterface() {
   const [tokenOut, setTokenOut] = useState<string | null>(null)
   const [amountIn, setAmountIn] = useState("")
   const [amountOut, setAmountOut] = useState("")
+  const [isHovered, setIsHovered] = useState(false)
+  const [tokenBalance, setTokenBalance] = useState<string | null>(null)
   const { chainId = 42161, isConnected, address } = useAccount()
   const { openConnectModal } = useConnectModal()
 
@@ -36,8 +38,21 @@ export function SwapInterface() {
     }
   }, [tokenIn, chainId])
 
+  const handleBalanceClick = (percentage: number) => {
+    if (!tokenBalance) return
+    const balance = parseFloat(tokenBalance)
+    const amount = (balance * percentage).toString()
+    setAmountIn(amount)
+  }
+
+  const showBalanceButtons = isHovered && isConnected && tokenIn
+
   return (
-    <div className="flex flex-col w-full space-y-6">
+    <div 
+      className="flex flex-col w-full space-y-6"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Sell Section */}
       <div className="flex flex-col space-y-4">
         <label className="text-sm font-medium text-muted-foreground">Sell</label>
@@ -61,14 +76,52 @@ export function SwapInterface() {
                   decimals={selectedTokenIn?.decimals}
                   userAddress={address}
                   onAmountSelect={setAmountIn}
+                  onBalanceChange={setTokenBalance}
                   className="mt-1"
                 />
               )}
             </div>
           </div>
           
-          {/* Right: Token Selector */}
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {/* Right: Token Selector with Balance Buttons */}
+          <div className="flex flex-col items-end gap-2 flex-shrink-0 relative">
+            {/* Balance Buttons - shown on hover */}
+            {showBalanceButtons && (
+              <div className="flex items-center gap-1 mb-1 animate-in fade-in slide-in-from-top-2 duration-200 z-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  onClick={() => handleBalanceClick(0.25)}
+                >
+                  25%
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  onClick={() => handleBalanceClick(0.5)}
+                >
+                  50%
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  onClick={() => handleBalanceClick(0.75)}
+                >
+                  75%
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  onClick={() => handleBalanceClick(1)}
+                >
+                  MAX
+                </Button>
+              </div>
+            )}
             <TokenSelector
               value={tokenIn}
               onChange={setTokenIn}
