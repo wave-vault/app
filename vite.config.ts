@@ -10,6 +10,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: true, // Permette l'accesso dalla rete locale
+    port: 5173, // Porta di default di Vite
+  },
 })
 
 

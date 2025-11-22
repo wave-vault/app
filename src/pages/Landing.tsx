@@ -15,8 +15,8 @@ export function Landing() {
   return (
     <div className="min-h-screen relative overflow-hidden pb-20 md:pb-0">
       <AnimatedWaveBackground />
+      <Header />
       <div className="relative z-10">
-        <Header />
         <HeroSection />
         <ImpermanentLossSection />
         <FeaturesChips />
