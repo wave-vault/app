@@ -17,7 +17,7 @@ const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border text-card-foreground",
+        "rounded-3xl border text-card-foreground transition-all duration-300",
         glassClasses[variant],
         className
       )}

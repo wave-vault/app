@@ -25,27 +25,39 @@ export const BASE_WHITELISTED_TOKENS: BaseToken[] = [
     chainlinkFeed: "0x7e860098F58bBFC8648a4311b374B1D669a2bc6B", // USDC/USD on BASE
   },
   {
-    symbol: "sUSDe",
-    name: "Staked USDe",
-    address: "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3", // Staked USDe on BASE
+    symbol: "EURC",
+    name: "EURC",
+    address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", // EURC on BASE
+    decimals: 6,
+  },
+  {
+    symbol: "wETH",
+    name: "Wrapped Ether",
+    address: "0x4200000000000000000000000000000000000006",
     decimals: 18,
   },
   {
-    symbol: "EURC",
-    name: "EURC",
-    address: "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c", // EURC on BASE
-    decimals: 6,
+    symbol: "wBTC",
+    name: "Wrapped Bitcoin Base",
+    address: "0xF8c700552B67D64362Af3F2D48B098E5AC9b9870",
+    decimals: 8,
   },
   {
     symbol: "cbBTC",
     name: "Coinbase Wrapped BTC",
-    address: "0xcbB7C00000000000000000000000000000000000", // Placeholder - verify actual address
+    address: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+    decimals: 8,
+  },
+  {
+    symbol: "lBTC",
+    name: "Lombard Staked Bitcoin",
+    address: "0xecAc9C5F704e954931349Da37F60E39f515c11c1",
     decimals: 8,
   },
   {
     symbol: "USDe",
     name: "USDe",
-    address: "0x4158734D47Fc9692176B5085E0F1ee5b6D2F2C3D",
+    address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
     decimals: 18,
   },
   {
@@ -57,19 +69,19 @@ export const BASE_WHITELISTED_TOKENS: BaseToken[] = [
   {
     symbol: "GHO",
     name: "Gho Token",
-    address: "0x0000000000000000000000000000000000000000", // Placeholder - verify actual address
+    address: "0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee", // GHO on BASE
     decimals: 18,
   },
   {
     symbol: "LINK",
     name: "Chainlink (Universal)",
-    address: "0x88DfaAABaf06f3a41D2606EA98BC8edBC109Ebe7",
+    address: "0x88fb150bdc53a65fe94dea0c9ba0a6daf8c6e196",
     decimals: 18,
   },
   {
     symbol: "renzo",
     name: "Renzo Restaked ETH",
-    address: "0x0000000000000000000000000000000000000000", // Placeholder - verify actual address
+    address: "0x2416092f143378750bb29b79ed961ab195cceea5", // Placeholder - verify actual address
     decimals: 18,
   },
   {
@@ -87,7 +99,7 @@ export const BASE_WHITELISTED_TOKENS: BaseToken[] = [
   {
     symbol: "rsETHWrapper",
     name: "rsETHWrapper",
-    address: "0x0000000000000000000000000000000000000000", // Placeholder - verify actual address
+    address: "0x1bc71130a0e39942a7658878169764bbd8a45993", // Placeholder - verify actual address
     decimals: 18,
   },
   {

@@ -18,6 +18,7 @@ export function Landing() {
       <Header />
       <div className="relative z-10">
         <HeroSection />
+        <CTASection />
         <ImpermanentLossSection />
         <FeaturesChips />
         <BasketVaultsSection />
@@ -25,7 +26,6 @@ export function Landing() {
         <FactorSDKSection />
         <RebalancingSection />
         <MiniDEXSection />
-        <CTASection />
       </div>
       {/* Mobile Footer Navigation */}
       <MobileFooterNav />
