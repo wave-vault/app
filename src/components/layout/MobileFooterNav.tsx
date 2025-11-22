@@ -89,7 +89,7 @@ export function MobileFooterNav() {
   return (
     <div
       className={cn(
-        "md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur-xl border-t-2 border-aqua-500/60 dark:border-aqua-500/30 z-40 shadow-[0_-4px_12px_rgba(0,217,255,0.15)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.4)] transition-transform duration-300 rounded-t-2xl",
+        "md:hidden fixed bottom-0 left-0 right-0 glass-apple z-40 transition-transform duration-300 rounded-t-2xl",
         isVisible ? "translate-y-0" : "translate-y-full"
       )}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

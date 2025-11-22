@@ -34,7 +34,7 @@ export function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4 px-4 sm:px-0">
-            <Button size="lg" variant="default" className="w-full sm:w-auto text-base sm:text-lg px-8 py-6" asChild>
+            <Button size="lg" variant="glass-apple" className="w-full sm:w-auto text-base sm:text-lg px-8 py-6" asChild>
               <Link to="/swap">
                 <Rocket className="mr-2 h-5 w-5" />
                 Open App

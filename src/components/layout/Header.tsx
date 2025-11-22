@@ -50,7 +50,7 @@ export function Header() {
   return (
     <div
       className={cn(
-        "fixed top-0 left-0 right-0 z-[9999] w-full border-b-2 border-aqua-500/60 dark:border-aqua-500/30 glass-apple backdrop-blur-xl bg-white/95 dark:bg-black/95 rounded-b-2xl transition-transform duration-300 shadow-lg will-change-transform",
+        "fixed top-0 left-0 right-0 z-[9999] w-full glass-apple rounded-b-2xl transition-transform duration-300 will-change-transform",
         isVisible || !isMobile ? "translate-y-0" : "-translate-y-full"
       )}
     >

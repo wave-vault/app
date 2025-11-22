@@ -89,33 +89,33 @@ export function SwapInterface() {
             {showBalanceButtons && (
               <div className="flex items-center gap-1 mb-1 animate-in fade-in slide-in-from-top-2 duration-200 z-10">
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   size="sm"
-                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full"
                   onClick={() => handleBalanceClick(0.25)}
                 >
                   25%
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   size="sm"
-                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full"
                   onClick={() => handleBalanceClick(0.5)}
                 >
                   50%
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   size="sm"
-                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full"
                   onClick={() => handleBalanceClick(0.75)}
                 >
                   75%
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="glass"
                   size="sm"
-                  className="h-7 px-2.5 text-xs font-medium rounded-full bg-background/80 dark:bg-gray-800/80 hover:bg-accent border border-border/50 hover:border-aqua-500/50 transition-all"
+                  className="h-7 px-2.5 text-xs font-medium rounded-full"
                   onClick={() => handleBalanceClick(1)}
                 >
                   MAX
@@ -136,9 +136,9 @@ export function SwapInterface() {
       {/* Swap Arrow Button */}
       <div className="flex justify-center -my-1 relative z-10">
         <Button
-          variant="ghost"
+          variant="glass"
           size="icon"
-          className="rounded-full h-10 w-10 bg-background/80 border border-border/50 hover:bg-accent hover:border-border shadow-sm"
+          className="rounded-full h-10 w-10"
           onClick={handleSwap}
         >
           <ArrowDown className="h-5 w-5" />
@@ -174,8 +174,8 @@ export function SwapInterface() {
       {/* Action Button */}
       <div className="pt-2">
         <Button
-          variant="default"
-          className="w-full rounded-full h-14 text-base font-medium shadow-sm"
+          variant="glass-apple"
+          className="w-full rounded-full h-14 text-base font-medium"
           disabled={!tokenIn || !tokenOut || !amountIn}
           onClick={() => {
             if (!isConnected && openConnectModal) {

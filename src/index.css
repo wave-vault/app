@@ -139,47 +139,51 @@ body.footer-visible {
 @layer utilities {
   /* Liquid Glass / Glassmorphism Effects with Aqua accents - Light & Dark mode */
   .glass {
-    background: rgba(255, 255, 255, 1);
-    backdrop-filter: blur(10px) saturate(180%);
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-    border: 2px solid rgba(0, 217, 255, 0.5);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1.5px solid rgba(0, 217, 255, 0.4);
     box-shadow: 
-      0 8px 32px 0 rgba(0, 217, 255, 0.25),
-      0 4px 16px 0 rgba(0, 0, 0, 0.12),
+      0 8px 32px 0 rgba(0, 217, 255, 0.2),
+      0 4px 16px 0 rgba(0, 0, 0, 0.1),
       0 2px 8px 0 rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 0 rgba(255, 255, 255, 1);
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 0 rgba(0, 217, 255, 0.1);
   }
 
   .dark .glass {
-    background: rgba(31, 31, 31, 0.8); /* Nero grigiastro con opacità */
-    border: 2px solid rgba(0, 217, 255, 0.4);
+    background: rgba(20, 20, 20, 0.6); /* Più trasparente e opaco */
+    border: 1.5px solid rgba(0, 217, 255, 0.35);
     box-shadow: 
-      0 8px 32px 0 rgba(0, 217, 255, 0.2),
-      0 4px 16px 0 rgba(0, 0, 0, 0.4),
-      0 2px 8px 0 rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+      0 8px 32px 0 rgba(0, 217, 255, 0.15),
+      0 4px 16px 0 rgba(0, 0, 0, 0.5),
+      0 2px 8px 0 rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+      inset 0 -1px 0 0 rgba(0, 217, 255, 0.08);
   }
 
   .glass-strong {
-    background: rgba(255, 255, 255, 1);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 2.5px solid rgba(0, 217, 255, 0.6);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 2px solid rgba(0, 217, 255, 0.5);
     box-shadow: 
-      0 12px 48px 0 rgba(0, 217, 255, 0.3),
-      0 6px 24px 0 rgba(0, 0, 0, 0.15),
+      0 12px 48px 0 rgba(0, 217, 255, 0.25),
+      0 6px 24px 0 rgba(0, 0, 0, 0.12),
       0 2px 8px 0 rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 0 rgba(255, 255, 255, 1);
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 0 rgba(0, 217, 255, 0.15);
   }
 
   .dark .glass-strong {
-    background: rgba(31, 31, 31, 0.9); /* Nero grigiastro */
-    border: 2.5px solid rgba(0, 217, 255, 0.5);
+    background: rgba(20, 20, 20, 0.7); /* Più trasparente e opaco */
+    border: 2px solid rgba(0, 217, 255, 0.4);
     box-shadow: 
-      0 12px 48px 0 rgba(0, 217, 255, 0.25),
-      0 6px 24px 0 rgba(0, 0, 0, 0.5),
-      0 2px 8px 0 rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+      0 12px 48px 0 rgba(0, 217, 255, 0.2),
+      0 6px 24px 0 rgba(0, 0, 0, 0.6),
+      0 2px 8px 0 rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 0 rgba(0, 217, 255, 0.1);
   }
 
   .glass-light {
@@ -205,56 +209,56 @@ body.footer-visible {
   }
 
   .glass-hover:hover {
-    background: rgba(255, 255, 255, 1);
-    border-color: rgba(0, 217, 255, 0.6);
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 217, 255, 0.55);
     box-shadow: 
-      0 12px 40px 0 rgba(0, 217, 255, 0.35),
-      0 6px 20px 0 rgba(0, 0, 0, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 1);
+      0 12px 40px 0 rgba(0, 217, 255, 0.3),
+      0 6px 20px 0 rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
     transform: translateY(-2px);
   }
 
   .dark .glass-hover:hover {
-    background: rgba(31, 31, 31, 0.95); /* Nero grigiastro */
-    border-color: rgba(0, 217, 255, 0.5);
+    background: rgba(20, 20, 20, 0.75); /* Più trasparente e opaco */
+    border-color: rgba(0, 217, 255, 0.45);
     box-shadow: 
-      0 12px 40px 0 rgba(0, 217, 255, 0.3),
-      0 6px 20px 0 rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+      0 12px 40px 0 rgba(0, 217, 255, 0.25),
+      0 6px 20px 0 rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
   }
 
   /* Aqua-style liquid glass with cyan accents - Light & Dark mode */
   .glass-apple {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(255, 255, 255, 0.98) 50%,
-      rgba(240, 253, 255, 1) 100%
+      rgba(255, 255, 255, 0.75) 0%,
+      rgba(255, 255, 255, 0.7) 50%,
+      rgba(240, 253, 255, 0.8) 100%
     );
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 2.5px solid rgba(0, 217, 255, 0.65);
+    border: 1.5px solid rgba(0, 217, 255, 0.5);
     box-shadow: 
-      0 10px 40px 0 rgba(0, 217, 255, 0.4),
-      0 6px 20px 0 rgba(0, 0, 0, 0.15),
-      0 2px 8px 0 rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 0 rgba(255, 255, 255, 1),
-      inset 0 -1px 0 0 rgba(0, 217, 255, 0.2);
+      0 10px 40px 0 rgba(0, 217, 255, 0.3),
+      0 6px 20px 0 rgba(0, 0, 0, 0.12),
+      0 2px 8px 0 rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 0 rgba(0, 217, 255, 0.15);
   }
 
   .dark .glass-apple {
     background: linear-gradient(
       135deg,
-      rgba(31, 31, 31, 0.85) 0%,
-      rgba(26, 26, 26, 0.8) 50%,
-      rgba(20, 20, 20, 0.9) 100%
+      rgba(20, 20, 20, 0.65) 0%,
+      rgba(18, 18, 18, 0.6) 50%,
+      rgba(15, 15, 15, 0.7) 100%
     );
-    border: 2.5px solid rgba(0, 217, 255, 0.45);
+    border: 1.5px solid rgba(0, 217, 255, 0.4);
     box-shadow: 
-      0 10px 40px 0 rgba(0, 217, 255, 0.25),
-      0 6px 20px 0 rgba(0, 0, 0, 0.4),
-      0 2px 8px 0 rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 10px 40px 0 rgba(0, 217, 255, 0.2),
+      0 6px 20px 0 rgba(0, 0, 0, 0.5),
+      0 2px 8px 0 rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
       inset 0 -1px 0 0 rgba(0, 217, 255, 0.1);
   }
 

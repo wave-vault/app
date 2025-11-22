@@ -48,7 +48,7 @@ export function CTASection() {
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                 Explore all features, swap tokens, monitor your positions, view analytics, and manage your vaults from a unified interface.
               </p>
-              <Button className="w-full text-base" variant="default" asChild>
+              <Button className="w-full text-base" variant="glass-apple" asChild>
                 <Link to="/swap">
                   Go to Swap
                   <ArrowRight className="ml-2 h-4 w-4" />

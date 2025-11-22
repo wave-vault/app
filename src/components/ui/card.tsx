@@ -5,12 +5,12 @@ import { cn } from "@/lib/utils"
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "glass" | "glass-strong" | "glass-apple" }
->(({ className, variant = "default", ...props }, ref) => {
+>(({ className, variant = "glass-apple", ...props }, ref) => {
   const glassClasses = {
     glass: "glass glass-hover",
     "glass-strong": "glass-strong glass-hover",
     "glass-apple": "glass-apple glass-hover",
-    default: "bg-card shadow"
+    default: "bg-card/50 backdrop-blur-sm border border-border/50 shadow"
   }
   
   return (
