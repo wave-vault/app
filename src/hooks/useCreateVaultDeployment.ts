@@ -8,7 +8,6 @@ import { erc20ABI } from '@factordao/contracts'
 import { parseEther, Address } from 'viem'
 import { useTransactionFlow, TransactionFlowStep } from './useTransactionFlow'
 import { getBaseTokenByAddress } from '@/lib/constants/baseTokens'
-import { getChainlinkFeed } from '@/lib/constants/chainlinkFeeds'
 
 const environment = 'testing' as const
 const chainId = ChainId.BASE
@@ -130,6 +129,8 @@ export function useCreateVaultDeployment(params: VaultDeploymentParams) {
           initialAssetAddresses: config.whitelistedTokens as Address[],
           initialDepositAssetAddresses: config.whitelistedTokens as Address[],
           initialWithdrawAssetAddresses: config.whitelistedTokens as Address[],
+          // All whitelisted tokens are standard tokens (not aTokens or special tokens),
+          // so they all use Chainlink accounting adapter
           initialAssetAccountingAddresses: config.whitelistedTokens.map(
             () => factor_chainlink_accounting_adapter_pro
           ) as Address[],
@@ -217,14 +218,23 @@ export function useCreateVaultDeployment(params: VaultDeploymentParams) {
           continue
         }
 
-        // Get Chainlink feeds from mapping
-        const feed0 = getChainlinkFeed(token0Address)
-        const feed1 = getChainlinkFeed(token1Address)
+        // Get Chainlink feeds from baseTokens (single source of truth)
+        // All whitelisted tokens should have chainlinkFeed defined in baseTokens.ts
+        if (!baseToken0.chainlinkFeed || !baseToken1.chainlinkFeed) {
+          throw new Error(
+            `Missing Chainlink feed for pair ${baseToken0.symbol}/${baseToken1.symbol}. ` +
+            `Token ${!baseToken0.chainlinkFeed ? baseToken0.symbol : baseToken1.symbol} is missing chainlinkFeed in baseTokens.ts`
+          )
+        }
+
+        const feed0 = baseToken0.chainlinkFeed as Address
+        const feed1 = baseToken1.chainlinkFeed as Address
 
         // Convert fee percentage to basis points (e.g., 0.3% -> 30 bps)
         const feeBps = Math.round(pair.fee * 100)
 
         console.log(`Setting pair: ${baseToken0.symbol}/${baseToken1.symbol} with fee ${feeBps} bps`)
+        console.log(`  Chainlink feeds: ${baseToken0.symbol}=${feed0}, ${baseToken1.symbol}=${feed1}`)
 
         const setPairData = sbEncoder.adapter.aqua.setPair({
           token0: token0Address as Address,

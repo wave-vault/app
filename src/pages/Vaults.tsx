@@ -838,8 +838,8 @@ export function Vaults() {
                         <p className="text-lg font-bold">
                           {vault.tvlUsd ? (
                             `$${parseFloat(vault.tvlUsd).toLocaleString(undefined, { 
-                              maximumFractionDigits: 2,
-                              minimumFractionDigits: 0
+                              maximumFractionDigits: 4,
+                              minimumFractionDigits: 4
                             })}`
                           ) : (
                             <span className="text-muted-foreground text-sm">N/A</span>

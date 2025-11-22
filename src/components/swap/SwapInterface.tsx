@@ -1,12 +1,16 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowDown } from "lucide-react"
+import { ArrowDown, Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { TokenSelector } from "./TokenSelector"
+import { SlippageSelector } from "./SlippageSelector"
 import { FactorTokenlist } from "@factordao/tokenlist"
 import { useAccount, useReadContract } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
-import { formatUnits } from "viem"
+import { formatUnits, Address } from "viem"
+import { useSwapQuote } from "@/hooks/useSwapQuote"
+import { useAquaSwap } from "@/hooks/useAquaSwap"
+import { percentageToBps, DEFAULT_SLIPPAGE_BPS } from "@/lib/constants/swap"
 
 // ERC20 ABI for balanceOf
 const ERC20_ABI = [
@@ -25,6 +29,7 @@ export function SwapInterface() {
   const [amountIn, setAmountIn] = useState("")
   const [amountOut, setAmountOut] = useState("")
   const [isHoveringSell, setIsHoveringSell] = useState(false)
+  const [slippage, setSlippage] = useState(1) // Default 1%
   const { chainId = 8453, isConnected, address } = useAccount() // BASE chain
   const { openConnectModal } = useConnectModal()
 
@@ -67,7 +72,59 @@ export function SwapInterface() {
     return parseFloat(formatUnits(balance as bigint, decimals)).toString()
   }, [balance, selectedTokenIn])
 
-  const handleSwap = () => {
+  // Get selected token out info
+  const selectedTokenOut = useMemo(() => {
+    if (!tokenOut) return null
+    try {
+      const tokenlist = new FactorTokenlist(chainId as any)
+      const tokens = tokenlist.getAllGeneralTokens()
+      return tokens.find((t: any) => t.address?.toLowerCase() === tokenOut.toLowerCase()) || null
+    } catch {
+      return null
+    }
+  }, [tokenOut, chainId])
+
+  // Get swap quote
+  const { quote, isLoading: isLoadingQuote, error: quoteError, xycStrategy, zeroForOne } = useSwapQuote({
+    tokenIn: tokenIn as Address | null,
+    tokenOut: tokenOut as Address | null,
+    amountIn,
+    tokenInDecimals: selectedTokenIn?.decimals || 18,
+  })
+
+  // Auto-update amountOut when quote changes
+  useEffect(() => {
+    if (quote && selectedTokenOut && quote > 0n) {
+      const decimals = selectedTokenOut.decimals || 18
+      const formatted = formatUnits(quote, decimals)
+      setAmountOut(formatted)
+    } else if (!quote || quote === 0n) {
+      setAmountOut("")
+    }
+  }, [quote, selectedTokenOut])
+
+  // Swap execution hook
+  const slippageBps = useMemo(() => percentageToBps(slippage), [slippage])
+  
+  const { handleSwap, isLoading: isSwapping, steps, needsApproval } = useAquaSwap({
+    tokenIn: tokenIn as Address,
+    tokenOut: tokenOut as Address,
+    amountIn,
+    tokenInDecimals: selectedTokenIn?.decimals || 18,
+    tokenOutDecimals: selectedTokenOut?.decimals || 18,
+    slippageBps,
+    recipient: address as Address,
+    xycStrategy: xycStrategy || null,
+    zeroForOne,
+    quote,
+    onSuccess: () => {
+      // Refresh balances and reset amounts
+      setAmountIn("")
+      setAmountOut("")
+    },
+  })
+
+  const handleFlipTokens = () => {
     const temp = tokenIn
     setTokenIn(tokenOut)
     setTokenOut(temp)
@@ -178,7 +235,7 @@ export function SwapInterface() {
           variant="glass"
           size="icon"
           className="rounded-full h-10 w-10"
-          onClick={handleSwap}
+          onClick={handleFlipTokens}
         >
           <ArrowDown className="h-5 w-5" />
         </Button>
@@ -211,22 +268,90 @@ export function SwapInterface() {
         </div>
       </div>
 
+      {/* Slippage Selector */}
+      {tokenIn && tokenOut && amountIn && (
+        <div className="pt-2">
+          <SlippageSelector
+            slippage={slippage}
+            onSlippageChange={setSlippage}
+          />
+        </div>
+      )}
+
+      {/* Error Message */}
+      {quoteError && (
+        <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-lg">
+          {quoteError}
+        </div>
+      )}
+
+      {/* Stepper UI for Approve and Swap */}
+      {(isSwapping || steps.approve !== 'idle' || steps.swap !== 'idle') && (
+        <div className="space-y-2 p-4 rounded-lg bg-muted/30 border border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {steps.approve === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
+              {steps.approve === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+              {steps.approve === 'error' && <XCircle className="h-4 w-4 text-destructive" />}
+              {steps.approve === 'idle' && <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {steps.approve === 'loading' && 'Approving token...'}
+                {steps.approve === 'success' && 'Token approved'}
+                {steps.approve === 'error' && 'Approval failed'}
+                {steps.approve === 'idle' && (needsApproval ? 'Approve token' : 'Token approved')}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {steps.swap === 'loading' && <Loader2 className="h-4 w-4 animate-spin" />}
+              {steps.swap === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+              {steps.swap === 'error' && <XCircle className="h-4 w-4 text-destructive" />}
+              {steps.swap === 'idle' && <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {steps.swap === 'loading' && 'Executing swap...'}
+                {steps.swap === 'success' && 'Swap completed'}
+                {steps.swap === 'error' && 'Swap failed'}
+                {steps.swap === 'idle' && 'Execute swap'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Button */}
       <div className="pt-2">
         <Button
           variant="glass-apple"
           className="w-full rounded-full h-14 text-base font-medium"
-          disabled={!tokenIn || !tokenOut || !amountIn}
-          onClick={() => {
+          disabled={
+            !tokenIn || 
+            !tokenOut || 
+            !amountIn || 
+            !quote || 
+            quote === 0n ||
+            isLoadingQuote ||
+            isSwapping ||
+            !!quoteError
+          }
+          onClick={async () => {
             if (!isConnected && openConnectModal) {
               openConnectModal()
             } else {
-              // TODO: Implement swap logic
-              console.log("Swap:", { tokenIn, tokenOut, amountIn, amountOut })
+              try {
+                await handleSwap()
+              } catch (error: any) {
+                console.error('[SwapInterface] Swap error:', error)
+                // Error is already handled in useAquaSwap
+              }
             }
           }}
         >
-          SWAP
+          {isLoadingQuote ? 'Loading quote...' : isSwapping ? 'Swapping...' : 'SWAP'}
         </Button>
       </div>
     </div>

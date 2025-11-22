@@ -276,7 +276,10 @@ export function VaultDetail() {
             <div>
               <p className="text-sm text-muted-foreground">TVL</p>
               <p className="text-2xl font-bold">
-                {enrichedVault.tvlUsd ? `$${parseFloat(enrichedVault.tvlUsd).toLocaleString()}` : "N/A"}
+                {enrichedVault.tvlUsd ? `$${parseFloat(enrichedVault.tvlUsd).toLocaleString(undefined, { 
+                  maximumFractionDigits: 4,
+                  minimumFractionDigits: 4
+                })}` : "N/A"}
               </p>
             </div>
             {enrichedVault.pricePerShareUsd && (
