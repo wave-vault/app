@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useQuery } from "@tanstack/react-query"
 import { VaultActions } from "@/components/vault/VaultActions"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, ExternalLink } from "lucide-react"
 import { Link } from "react-router-dom"
 import { fetchVaultByAddress, AggregatedVault } from "@/services/vaultService"
 import { useVaultUserShares } from "@/hooks/useVaultUserShares"
@@ -407,9 +407,15 @@ export function VaultDetail() {
         
         {/* Row 2: Address + Rebalance Button */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm text-muted-foreground">
-            {enrichedVault.address.slice(0, 6)}...{enrichedVault.address.slice(-4)}
-          </p>
+          <a
+            href={`https://basescan.org/address/${enrichedVault.address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 group"
+          >
+            <span>{enrichedVault.address.slice(0, 6)}...{enrichedVault.address.slice(-4)}</span>
+            <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+          </a>
           <Button
             variant="glass-apple"
             className="rounded-full flex-shrink-0"
