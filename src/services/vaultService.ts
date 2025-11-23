@@ -426,16 +426,12 @@ function normalizeVaultAddress(vault: ProVaultResponse): string {
  */
 export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   // Fetch subgraph pairs first - this determines which vaults we show
-  const startTime = performance.now()
-  
   const [aquaPairs, proVaults, availableTokens, strategies] = await Promise.all([
     fetchAquaPairs(),
     fetchProVaults(),
     fetchAvailableTokens(),
     fetchStrategies(),
   ])
-  
-  const fetchTime = performance.now() - startTime
 
   // Extract unique vault addresses from subgraph pairs
   // Store both lowercase (for matching) and original (for display)
@@ -860,7 +856,6 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   })
 
   const result = Array.from(vaultMap.values())
-  const processingTime = performance.now() - startTime
 
   return result
 }

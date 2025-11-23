@@ -17,9 +17,7 @@ export const config = getDefaultConfig({
   ssr: false, // Non usiamo SSR con Vite
   transports: {
     [base.id]: http(baseRpcUrl, {
-      batch: {
-        multicall: true,
-      },
+      batch: true,
       // Configurazione ottimizzata per Alchemy
       timeout: 30_000, // 30 secondi
       retryCount: 3, // Riprova fino a 3 volte
