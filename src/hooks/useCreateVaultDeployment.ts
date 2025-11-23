@@ -7,7 +7,7 @@ import { FactorTokenlist } from '@factordao/tokenlist'
 import { erc20ABI } from '@factordao/contracts'
 import { parseEther, parseUnits, formatUnits, Address, getAddress } from 'viem'
 import { useTransactionFlow, TransactionFlowStep } from './useTransactionFlow'
-import { getBaseTokenByAddress, getAccountingAdapterForToken } from '@/lib/constants/baseTokens'
+import { getBaseTokenByAddress } from '@/lib/constants/baseTokens'
 
 const environment = 'testing' as const
 const chainId = ChainId.BASE
@@ -75,7 +75,6 @@ export function useCreateVaultDeployment(params: VaultDeploymentParams) {
       }
 
       const { 
-        factor_chainlink_accounting_adapter_pro, 
         factor_aqua_adapter_pro,
         factor_studio_pro_factory 
       } = getContractAddressesForChainOrThrow(chainId, environment)
@@ -118,7 +117,8 @@ export function useCreateVaultDeployment(params: VaultDeploymentParams) {
         args: [userAddress, factor_studio_pro_factory as Address],
       })
       
-      const initialDepositBNForApproval = parseUnits(initialDeposit, tokenDecimals)
+      // initialDeposit is already in wei format (from parseUnits above), so just convert to BigInt
+      const initialDepositBNForApproval = BigInt(initialDeposit)
       const needsApproval = currentAllowance < initialDepositBNForApproval
       
       if (needsApproval) {
