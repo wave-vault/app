@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,10 +11,13 @@ import { ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
 import { fetchVaultByAddress, AggregatedVault } from "@/services/vaultService"
 import { useVaultUserShares } from "@/hooks/useVaultUserShares"
-import { Address } from "viem"
+import { Address, formatUnits, createPublicClient, http, multicall } from "viem"
 import { FactorTokenlist } from "@factordao/tokenlist"
 import { BASE_WHITELISTED_TOKENS } from "@/lib/constants/baseTokens"
-import { useAccount } from "wagmi"
+import { useAccount, useReadContract } from "wagmi"
+import { erc20ABI, studioProV1ABI } from "@factordao/contracts"
+import { base } from "viem/chains"
+import { getBaseRpcUrl } from "@/lib/constants/rpc"
 
 const STATS_API_BASE_URL = import.meta.env.VITE_STATS_API_BASE_URL || ""
 
@@ -190,6 +193,29 @@ export function VaultDetail() {
     pricePerShareUsd: enrichedVault?.pricePerShareUsd,
   })
 
+  // Read TVL directly from vault contract (more up-to-date than API)
+  const { data: netVaultValue, isLoading: isLoadingTvl } = useReadContract({
+    address: enrichedVault?.address as Address | undefined,
+    abi: studioProV1ABI,
+    functionName: 'getNetVaultValue',
+    chainId: enrichedVault?.chainId,
+    query: {
+      enabled: !!enrichedVault?.address,
+    },
+  })
+
+  // Format TVL: value is in USDC format (6 decimals = 10^6)
+  const contractTvl = useMemo(() => {
+    if (!netVaultValue) return null
+    
+    const valueBigInt = netVaultValue as bigint
+    // Convert from USDC format (6 decimals) to USD string
+    return formatUnits(valueBigInt, 6)
+  }, [netVaultValue])
+
+  // Use contract TVL if available, otherwise fallback to API TVL
+  const displayTvl = contractTvl || enrichedVault?.tvlUsd
+
   // Merge user shares into vault data
   const vaultWithShares = enrichedVault
     ? {
@@ -229,6 +255,113 @@ export function VaultDetail() {
   const depositTokens = enrichedVault.tokens?.filter((t) => t.isDepositAsset) || []
   const withdrawTokens = enrichedVault.tokens?.filter((t) => t.isWithdrawAsset) || []
 
+  // Read balances for all supported tokens using viem multicall
+  const { address: userAddress, isConnected } = useAccount()
+  const supportedTokens = enrichedVault.tokens || []
+  const [tokenBalances, setTokenBalances] = useState<Map<string, { balance: bigint; formatted: string }>>(new Map())
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false)
+
+  useEffect(() => {
+    if (!isConnected || !userAddress || supportedTokens.length === 0 || !enrichedVault?.chainId) {
+      setTokenBalances(new Map())
+      return
+    }
+
+    const fetchBalances = async () => {
+      setIsLoadingBalances(true)
+      try {
+        const publicClient = createPublicClient({
+          chain: base,
+          transport: http(getBaseRpcUrl()),
+        })
+
+        // Prepare multicall contracts for balances
+        const balanceContracts = supportedTokens.map((token) => ({
+          address: token.address as Address,
+          abi: erc20ABI,
+          functionName: 'balanceOf' as const,
+          args: [userAddress as Address] as const,
+        }))
+
+        // Prepare multicall contracts for decimals
+        const decimalsContracts = supportedTokens.map((token) => ({
+          address: token.address as Address,
+          abi: erc20ABI,
+          functionName: 'decimals' as const,
+        }))
+
+        // Execute multicalls in parallel
+        const [balanceResults, decimalsResults] = await Promise.all([
+          publicClient.multicall({ contracts: balanceContracts }),
+          publicClient.multicall({ contracts: decimalsContracts }),
+        ])
+
+        // Process results and create balance map
+        const balances = new Map<string, { balance: bigint; formatted: string }>()
+        
+        balanceResults.forEach((result, index) => {
+          const token = supportedTokens[index]
+          const decimalsResult = decimalsResults[index]
+          
+          if (token && result.status === 'success' && result.result) {
+            const balance = result.result as bigint
+            
+            // Get decimals from multicall result, fallback to token metadata or 18
+            let decimals = 18
+            if (decimalsResult?.status === 'success' && decimalsResult.result !== undefined) {
+              decimals = Number(decimalsResult.result)
+            } else if (token.decimals) {
+              decimals = token.decimals
+            }
+            
+            const formatted = formatUnits(balance, decimals)
+            const balanceNum = parseFloat(formatted)
+            
+            // Format balance for display with proper precision based on decimals
+            let displayBalance = '0'
+            if (balanceNum > 0) {
+              // For very small numbers, show more precision
+              if (balanceNum < 0.0001) {
+                // Show up to 6 significant digits for very small numbers
+                const significantDigits = Math.max(decimals <= 6 ? 6 : 8, 4)
+                displayBalance = balanceNum.toFixed(significantDigits).replace(/\.?0+$/, '')
+                if (displayBalance === '0' || displayBalance === '') {
+                  displayBalance = '<0.0001'
+                }
+              } else if (balanceNum >= 1_000_000) {
+                displayBalance = `${(balanceNum / 1_000_000).toFixed(2)}M`
+              } else if (balanceNum >= 1_000) {
+                displayBalance = `${(balanceNum / 1_000).toFixed(2)}K`
+              } else {
+                // For normal numbers, show appropriate decimal places based on token decimals
+                const maxDecimals = decimals <= 6 ? 6 : 8
+                const minDecimals = balanceNum < 1 ? 4 : 2
+                displayBalance = balanceNum.toLocaleString('en-US', {
+                  maximumFractionDigits: maxDecimals,
+                  minimumFractionDigits: minDecimals,
+                })
+              }
+            }
+            
+            balances.set(token.address.toLowerCase(), {
+              balance,
+              formatted: displayBalance,
+            })
+          }
+        })
+
+        setTokenBalances(balances)
+      } catch (error) {
+        console.error('Error fetching token balances:', error)
+        setTokenBalances(new Map())
+      } finally {
+        setIsLoadingBalances(false)
+      }
+    }
+
+    fetchBalances()
+  }, [supportedTokens, isConnected, userAddress, enrichedVault?.chainId])
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -260,6 +393,15 @@ export function VaultDetail() {
             Rebalance Pairs Price
           </Button>
         </div>
+        
+        {/* Row 3: Description */}
+        {enrichedVault.description && (
+          <div className="pt-2">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {enrichedVault.description}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Vault Info */}
@@ -272,10 +414,16 @@ export function VaultDetail() {
             <div>
               <p className="text-sm text-muted-foreground">TVL</p>
               <p className="text-2xl font-bold">
-                {enrichedVault.tvlUsd ? `$${parseFloat(enrichedVault.tvlUsd).toLocaleString(undefined, { 
-                  maximumFractionDigits: 4,
-                  minimumFractionDigits: 4
-                })}` : "N/A"}
+                {isLoadingTvl ? (
+                  "..."
+                ) : displayTvl ? (
+                  `$${parseFloat(displayTvl).toLocaleString(undefined, { 
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2
+                  })}`
+                ) : (
+                  "N/A"
+                )}
               </p>
             </div>
             {enrichedVault.pricePerShareUsd && (
@@ -323,32 +471,43 @@ export function VaultDetail() {
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Supported Tokens ({enrichedVault.tokens.length})</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {enrichedVault.tokens.map((token, idx) => (
-                    <Badge 
-                      key={idx} 
-                      variant="secondary" 
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs hover:bg-accent/80 transition-colors"
-                      title={token.name || token.symbol}
-                    >
-                      {token.logoURI ? (
-                        <img
-                          src={token.logoURI}
-                          alt={token.symbol || 'Token'}
-                          className="w-5 h-5 rounded-full flex-shrink-0 object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                          <span className="text-[10px] font-bold text-muted-foreground">
-                            {token.symbol?.charAt(0)?.toUpperCase() || '?'}
+                  {enrichedVault.tokens.map((token, idx) => {
+                    const tokenBalance = isConnected && userAddress 
+                      ? tokenBalances.get(token.address.toLowerCase())
+                      : null
+                    
+                    return (
+                      <Badge 
+                        key={idx} 
+                        variant="secondary" 
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs hover:bg-accent/80 transition-colors"
+                        title={token.name || token.symbol}
+                      >
+                        {token.logoURI ? (
+                          <img
+                            src={token.logoURI}
+                            alt={token.symbol || 'Token'}
+                            className="w-5 h-5 rounded-full flex-shrink-0 object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                            <span className="text-[10px] font-bold text-muted-foreground">
+                              {token.symbol?.charAt(0)?.toUpperCase() || '?'}
+                            </span>
+                          </div>
+                        )}
+                        <span className="font-semibold">{token.symbol || 'Unknown'}</span>
+                        {isConnected && userAddress && (
+                          <span className="text-[10px] text-muted-foreground ml-0.5">
+                            {isLoadingBalances ? '...' : tokenBalance ? tokenBalance.formatted : '0'}
                           </span>
-                        </div>
-                      )}
-                      <span className="font-semibold">{token.symbol || 'Unknown'}</span>
-                    </Badge>
-                  ))}
+                        )}
+                      </Badge>
+                    )
+                  })}
                 </div>
               </div>
               

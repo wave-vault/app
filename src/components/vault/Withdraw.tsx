@@ -156,7 +156,7 @@ export function Withdraw({ vault, availableTokens, onBalanceUpdate }: WithdrawPr
     } catch (error) {
       return null
     }
-  }, [token, withdrawAmount, denominatorDecimals, vault.address])
+  }, [token, withdrawAmount, denominatorDecimals, vault.address, vault.chainId])
 
   // Debounced withdraw estimate
   useEffect(() => {

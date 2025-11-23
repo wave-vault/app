@@ -220,7 +220,7 @@ export function Deposit({ vault, availableTokens, onBalanceUpdate }: DepositProp
     return () => {
       clearTimeout(timeoutId)
     }
-  }, [depositAmount, token?.address, token?.decimals, vault.address])
+  }, [depositAmount, token?.address, token?.decimals, vault.address, vault.chainId])
 
 
   const denominatorDecimals = useMemo(() => {

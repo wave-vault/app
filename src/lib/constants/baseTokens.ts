@@ -83,7 +83,7 @@ export const BASE_WHITELISTED_TOKENS: BaseToken[] = [
   {
     symbol: "GHO",
     name: "Gho Token",
-    address: "0x42868EFcee13C0E71af89c04fF7d96f5bec479b0",
+    address: "0x6Bb7a212910682DCFdbd5BCBb3e28FB4E8da10Ee",
     decimals: 18,
     chainlinkFeed: "0x42868EFcee13C0E71af89c04fF7d96f5bec479b0", // GHO/USD feed (custom accounting adapter)
     accountingAdapter: "0x42868EFcee13C0E71af89c04fF7d96f5bec479b0", // Specific accounting adapter for GHO

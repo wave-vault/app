@@ -230,53 +230,107 @@ export function useCreateVaultDeployment(params: VaultDeploymentParams) {
       for (const pair of config.selectedPairs) {
         const [token0Address, token1Address] = pair.pairId.split('-')
         
-        const baseToken0 = getBaseTokenByAddress(token0Address)
-        const baseToken1 = getBaseTokenByAddress(token1Address)
+        // Normalize addresses to checksum format
+        const token0AddressNormalized = getAddress(token0Address.toLowerCase() as `0x${string}`)
+        const token1AddressNormalized = getAddress(token1Address.toLowerCase() as `0x${string}`)
+        
+        const baseToken0 = getBaseTokenByAddress(token0AddressNormalized)
+        const baseToken1 = getBaseTokenByAddress(token1AddressNormalized)
 
         if (!baseToken0 || !baseToken1) {
-          continue
-        }
-
-        // Get Chainlink feeds from baseTokens (single source of truth)
-        // All whitelisted tokens should have chainlinkFeed defined in baseTokens.ts
-        if (!baseToken0.chainlinkFeed || !baseToken1.chainlinkFeed) {
           throw new Error(
-            `Missing Chainlink feed for pair ${baseToken0.symbol}/${baseToken1.symbol}. ` +
-            `Token ${!baseToken0.chainlinkFeed ? baseToken0.symbol : baseToken1.symbol} is missing chainlinkFeed in baseTokens.ts`
+            `Token not found in baseTokens for pair ${pair.pairId}. ` +
+            `Token0: ${token0AddressNormalized}, Token1: ${token1AddressNormalized}. ` +
+            `Please ensure both tokens are in the whitelist.`
           )
         }
 
-        const feed0 = baseToken0.chainlinkFeed as Address
-        const feed1 = baseToken1.chainlinkFeed as Address
+        // Get Chainlink feeds from baseTokens (single source of truth)
+        // All whitelisted tokens MUST have a valid chainlinkFeed defined in baseTokens.ts
+        // Zero address is NOT allowed - tokens without feeds cannot be used in pairs
+        const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+        const feed0 = baseToken0.chainlinkFeed
+        const feed1 = baseToken1.chainlinkFeed
+        
+        if (!feed0 || !feed1 || feed0 === ZERO_ADDRESS || feed1 === ZERO_ADDRESS) {
+          throw new Error(
+            `Invalid Chainlink feed for pair ${baseToken0.symbol}/${baseToken1.symbol}. ` +
+            `Token ${!feed0 || feed0 === ZERO_ADDRESS ? baseToken0.symbol : baseToken1.symbol} does not have a valid chainlinkFeed. ` +
+            `Please ensure all tokens used in pairs have a valid Chainlink feed address in baseTokens.ts (zero address is not allowed).`
+          )
+        }
+
+        const feed0Address = getAddress(feed0.toLowerCase() as `0x${string}`)
+        const feed1Address = getAddress(feed1.toLowerCase() as `0x${string}`)
 
         // Convert fee percentage to basis points (e.g., 0.3% -> 30 bps)
         const feeBps = Math.round(pair.fee * 100)
+        
+        if (feeBps <= 0 || feeBps > 10000) {
+          throw new Error(
+            `Invalid fee for pair ${baseToken0.symbol}/${baseToken1.symbol}. ` +
+            `Fee must be between 0.01% and 100% (1-10000 basis points). Got: ${pair.fee}% (${feeBps} bps)`
+          )
+        }
 
-        const setPairData = sbEncoder.adapter.aqua.setPair({
-          token0: token0Address as Address,
-          token1: token1Address as Address,
-          feeBps,
-          chainlinkFeed0: feed0 as Address,
-          chainlinkFeed1: feed1 as Address,
-          dexes: [XYC_SWAP_ADDRESS],
-        })
+        try {
+          const setPairData = sbEncoder.adapter.aqua.setPair({
+            token0: token0AddressNormalized,
+            token1: token1AddressNormalized,
+            feeBps,
+            chainlinkFeed0: feed0Address,
+            chainlinkFeed1: feed1Address,
+            dexes: [XYC_SWAP_ADDRESS],
+          })
 
-        setPairTransactions.push(setPairData)
+          setPairTransactions.push(setPairData)
+        } catch (error: any) {
+          throw new Error(
+            `Failed to create setPair transaction for ${baseToken0.symbol}/${baseToken1.symbol}: ${error.message}`
+          )
+        }
+      }
+
+      // Check if we have any valid pairs to set
+      if (setPairTransactions.length === 0) {
+        throw new Error('No valid pairs to set. Please check that all tokens in your pairs have valid Chainlink feeds.')
       }
 
       // Add publishPairs transaction
-      const publishPairsData = sbEncoder.adapter.aqua.publishPairs()
-      setPairTransactions.push(publishPairsData)
+      let publishPairsData
+      try {
+        publishPairsData = sbEncoder.adapter.aqua.publishPairs()
+        setPairTransactions.push(publishPairsData)
+      } catch (error: any) {
+        throw new Error(`Failed to create publishPairs transaction: ${error.message}`)
+      }
 
       // Execute all as a batch through executeByManager
-      const executeData = proVault.executeByManager(setPairTransactions)
+      let executeData
+      try {
+        executeData = proVault.executeByManager(setPairTransactions)
+      } catch (error: any) {
+        throw new Error(`Failed to prepare executeByManager transaction: ${error.message}`)
+      }
       
-      const tx = await walletClient.sendTransaction({
-        ...executeData,
-        gas: 8000000n,
-      })
+      let tx
+      try {
+        tx = await walletClient.sendTransaction({
+          ...executeData,
+          gas: 8000000n,
+        })
+      } catch (error: any) {
+        throw new Error(`Transaction failed: ${error.message || error.toString()}`)
+      }
 
-      await publicClient.waitForTransactionReceipt({ hash: tx })
+      try {
+        const receipt = await publicClient.waitForTransactionReceipt({ hash: tx })
+        if (receipt.status === 'reverted') {
+          throw new Error('Transaction was reverted. Please check the transaction details on the explorer.')
+        }
+      } catch (error: any) {
+        throw new Error(`Failed to confirm transaction: ${error.message || error.toString()}`)
+      }
 
       return { vaultAddress, txHash: tx }
     },

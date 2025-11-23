@@ -338,6 +338,13 @@ export function Vaults() {
       })
     }
     
+    // Filter by TVL > 0.05 - show only vaults with TVL greater than 0.05
+    filtered = filtered.filter((vault) => {
+      if (!vault.tvlUsd) return false
+      const tvl = parseFloat(vault.tvlUsd)
+      return !isNaN(tvl) && tvl > 0.05
+    })
+    
     return filtered
   }, [enrichedVaults, search, selectedTokens, selectedPairs, myBalance, isConnected, tokenBalances])
 

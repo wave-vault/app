@@ -182,7 +182,6 @@ export function CreateVaultWizard() {
     watchedPerformanceFee,
     watchedWhitelistedTokens,
     watchedSelectedPairs,
-    isDeploymentModalOpen,
   ])
 
   // Create transaction flow - it will only execute when modal opens and start() is called
