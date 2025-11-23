@@ -39,18 +39,31 @@ export function Header() {
     }
   }
 
-  // Hide header on scroll down for mobile (same logic as footer)
-  useEffect(() => {
-    if (!isMobile) return
+  // Check if we're on landing page
+  const isLandingPage = location.pathname === '/'
 
+  // Hide header on scroll down for mobile (same logic as footer)
+  // For desktop on landing page: hide after first scroll down, show on scroll up
+  useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
 
-      // Show on scroll up, hide on scroll down (same logic as footer)
-      if (currentScrollY < lastScrollY || currentScrollY < 20) {
-        setIsVisible(true)
-      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false)
+      if (isMobile) {
+        // Mobile logic: show on scroll up, hide on scroll down
+        if (currentScrollY < lastScrollY || currentScrollY < 20) {
+          setIsVisible(true)
+        } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+          setIsVisible(false)
+        }
+      } else if (isLandingPage) {
+        // Desktop landing page: hide after first scroll down, show on scroll up
+        if (currentScrollY < lastScrollY || currentScrollY < 20) {
+          // Scrolling up or at top
+          setIsVisible(true)
+        } else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+          // Scrolling down and past threshold
+          setIsVisible(false)
+        }
       }
 
       setLastScrollY(currentScrollY)
@@ -58,13 +71,16 @@ export function Header() {
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [isMobile, lastScrollY])
+  }, [isMobile, isLandingPage, lastScrollY])
 
   return (
     <div
       className={cn(
         "fixed top-0 left-0 right-0 z-[9999] w-full glass-apple rounded-b-2xl transition-transform duration-300 will-change-transform",
-        isVisible || !isMobile ? "translate-y-0" : "-translate-y-full"
+        // Mobile: hide/show based on scroll
+        // Desktop landing page: hide/show based on scroll
+        // Desktop other pages: always visible
+        isVisible || (!isMobile && !isLandingPage) ? "translate-y-0" : "-translate-y-full"
       )}
     >
       <header className="container mx-auto px-4 sm:px-6 lg:px-8">

@@ -19,6 +19,7 @@ import { useAccount, useReadContract } from "wagmi"
 import { TrendingUp, TrendingDown, Minus, Filter, X } from "lucide-react"
 import { BASE_WHITELISTED_TOKENS } from "@/lib/constants/baseTokens"
 import { FactorTokenlist } from "@factordao/tokenlist"
+import { DisclaimerBanner } from "@/components/common/DisclaimerBanner"
 
 // ERC20 ABI for balanceOf
 const ERC20_ABI = [
@@ -1043,6 +1044,7 @@ export function Vaults() {
           })}
         </div>
       )}
+      <DisclaimerBanner />
     </div>
   )
 }

@@ -18,6 +18,7 @@ import { useAccount, useReadContract } from "wagmi"
 import { erc20ABI, studioProV1ABI } from "@factordao/contracts"
 import { base } from "viem/chains"
 import { getBaseRpcUrl } from "@/lib/constants/rpc"
+import { DisclaimerBanner } from "@/components/common/DisclaimerBanner"
 
 const STATS_API_BASE_URL = import.meta.env.VITE_STATS_API_BASE_URL || ""
 
@@ -683,6 +684,7 @@ export function VaultDetail() {
           </Tabs>
         </CardContent>
       </Card>
+      <DisclaimerBanner />
     </div>
   )
 }

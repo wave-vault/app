@@ -2,6 +2,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Container } from "@/components/atomic/Container"
 import { Layers, Network, BarChart3, Zap } from "lucide-react"
+import { VaultShowcaseCard } from "@/components/vault/VaultShowcaseCard"
 
 export function BasketVaultsSection() {
   return (
@@ -21,7 +22,7 @@ export function BasketVaultsSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 w-full px-4 sm:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 w-full px-4 sm:px-8 mb-12">
           <Card variant="glass" className="border-aqua-500/20 p-5">
             <div className="w-12 h-12 rounded-lg bg-aqua-500/10 flex items-center justify-center mb-4">
               <Network className="w-6 h-6 text-aqua-500" />
@@ -60,6 +61,19 @@ export function BasketVaultsSection() {
               Permissionless execution via smart contract adapters with on-demand or threshold triggers.
             </p>
           </Card>
+        </div>
+
+        {/* Featured Vault Showcase */}
+        <div id="featured-vault-section" className="w-full px-4 sm:px-8 scroll-mt-20">
+          <div className="text-center mb-6">
+            <Badge variant="outline" className="glass-apple mb-2">
+              Featured Vault
+            </Badge>
+            <h3 className="text-xl sm:text-2xl font-bold">
+              Example Multi-Asset Vault
+            </h3>
+          </div>
+          <VaultShowcaseCard vaultAddress="0x6878d79f988e7ecb537016b93bb77b4d680e1f01" />
         </div>
       </Container>
     </section>

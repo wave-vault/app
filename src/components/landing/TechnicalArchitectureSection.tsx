@@ -66,6 +66,42 @@ export function TechnicalArchitectureSection() {
               </div>
             </CardContent>
           </Card>
+
+          <Card variant="glass" className="p-6">
+            <CardTitle className="text-xl mb-3">Chainlink Price Feeds</CardTitle>
+            <CardContent className="space-y-4 p-0">
+              <div>
+                <h4 className="font-semibold mb-2 text-aqua-500 text-sm">Real-Time Price Data</h4>
+                <p className="text-xs text-muted-foreground">
+                  Fetch accurate, up-to-date token prices directly from Chainlink's decentralized oracle network for reliable market data.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2 text-aqua-500 text-sm">Automated Rebalancing</h4>
+                <p className="text-xs text-muted-foreground">
+                  Each rebalancing action is triggered by Chainlink price feeds, ensuring precise portfolio adjustments based on real-time market conditions.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="glass" className="p-6">
+            <CardTitle className="text-xl mb-3">Base Chain</CardTitle>
+            <CardContent className="space-y-4 p-0">
+              <div>
+                <h4 className="font-semibold mb-2 text-aqua-500 text-sm">DeFi Primitives</h4>
+                <p className="text-xs text-muted-foreground">
+                  Built on Base Chain, leveraging its robust DeFi infrastructure and native primitives for secure, efficient, and scalable operations.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2 text-aqua-500 text-sm">Optimized Performance</h4>
+                <p className="text-xs text-muted-foreground">
+                  Benefit from Base's low transaction costs and high throughput, enabling seamless rebalancing and optimal capital efficiency.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </Container>
     </section>
