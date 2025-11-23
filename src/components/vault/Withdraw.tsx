@@ -15,7 +15,7 @@ import { ActionPreview } from './ActionPreview'
 import { PercentageSelector } from './PercentageSelector'
 import { WalletBalance } from './WalletBalance'
 import { environment } from '@/lib/constants/dev'
-import { getBaseRpcUrl } from '@/lib/constants/rpc'
+import { getBaseRpcUrl, BASE_CHAIN_ID } from '@/lib/constants/rpc'
 import { useRef } from 'react'
 
 interface Token {
@@ -47,6 +47,7 @@ interface Vault {
 interface WithdrawProps {
   vault: Vault
   availableTokens: Token[]
+  onBalanceUpdate?: () => void // Callback to refresh balances after withdraw
 }
 
 const formatUsdCompact = (value: number): string => {
@@ -66,7 +67,7 @@ const formatUsdCompact = (value: number): string => {
   return mValue.toFixed(2).replace(/\.?0+$/, '') + 'm'
 }
 
-export function Withdraw({ vault, availableTokens }: WithdrawProps) {
+export function Withdraw({ vault, availableTokens, onBalanceUpdate }: WithdrawProps) {
   const { address } = useAccount()
   const { openConnectModal } = useConnectModal()
   const [withdrawAmount, setWithdrawAmount] = useState('')
@@ -98,6 +99,12 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     depositorAddress: address as Address,
     receiverAddress: address as Address,
     slippageTolerance: slippage,
+    onSuccess: () => {
+      // Refresh shares balance after withdraw
+      onBalanceUpdate?.()
+      // Clear withdraw amount
+      setWithdrawAmount('')
+    },
   })
 
   const [withdrawEstimate, setWithdrawEstimate] = useState<StudioProVaultPreviewWithdrawResult | null>(null)
@@ -136,7 +143,7 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     if (!token || !withdrawAmount || parseFloat(withdrawAmount) <= 0) return null
     try {
       const proVault = new StudioProVault({
-        chainId: 8453, // BASE
+        chainId: vault.chainId || BASE_CHAIN_ID,
         vaultAddress: vault.address as Address,
         environment: environment,
         jsonRpcUrl: getBaseRpcUrl(),
@@ -149,7 +156,7 @@ export function Withdraw({ vault, availableTokens }: WithdrawProps) {
     } catch (error) {
       return null
     }
-  }, [token, withdrawAmount, denominatorDecimals, vault.address])
+  }, [token, withdrawAmount, denominatorDecimals, vault.address, vault.chainId])
 
   // Debounced withdraw estimate
   useEffect(() => {

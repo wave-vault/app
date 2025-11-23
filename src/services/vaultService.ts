@@ -1,11 +1,39 @@
 /**
- * Vault Service - Aggregates data from multiple Factor Studio Stats API endpoints
+ * Vault Service - Aggregates data from multiple sources:
+ * - Subgraph (Aqua pairs - source of truth for vault list)
+ * - Stats API (vault metrics and analytics)
  */
 
 const STATS_API_BASE_URL = import.meta.env.VITE_STATS_API_BASE_URL || ""
-const VAULT_NAME_PREFIX = "ethGlobal - wave: "
+const SUBGRAPH_URL = "https://api.goldsky.com/api/public/project_cmgzitcts001c5np28moc9lyy/subgraphs/onewave/backend-0.0.6/gn"
 
 // ==================== Type Definitions ====================
+
+export interface AquaPair {
+  id: string
+  txid: string
+  token0: string
+  token1: string
+  feeBps: string
+  vault: string
+  pairHash: string
+}
+
+export interface SubgraphVault {
+  id: string
+  name: string
+  symbol: string
+  depositFee?: string
+  withdrawFee?: string
+  managementFee?: string
+  performanceFee?: string
+  pricePerShare?: string
+  assets?: string[]
+  depositAssets?: string[]
+  withdrawAssets?: string[]
+  denominator?: string
+  feesReceiver?: string
+}
 
 export interface VaultToken {
   symbol: string
@@ -96,6 +124,9 @@ export interface AggregatedVault {
     deposits?: Record<string, VaultDeposit>
     fetchedAt?: number
   }
+  
+  // Aqua Protocol data (from subgraph)
+  aquaPairs?: AquaPair[]
 }
 
 interface ProVaultResponse {
@@ -181,9 +212,120 @@ function createTokenInfoMap(availableTokens: AvailableTokenResponse[]): Map<stri
 
 // ==================== API Functions ====================
 
+/**
+ * Fetches vault data from subgraph
+ */
+async function fetchVaultsFromSubgraph(vaultAddresses: string[]): Promise<Map<string, SubgraphVault>> {
+  if (vaultAddresses.length === 0) return new Map()
+  
+  try {
+    // Query vaults by addresses
+    const addressesList = vaultAddresses.map(addr => `"${addr.toLowerCase()}"`).join(', ')
+    const query = `
+      {
+        vaults(
+          first: 1000,
+          where: { id_in: [${addressesList}] }
+        ) {
+          id
+          name
+          symbol
+          depositFee
+          withdrawFee
+          managementFee
+          performanceFee
+          pricePerShare
+          assets
+          depositAssets
+          withdrawAssets
+          denominator
+          feesReceiver
+        }
+      }
+    `
+
+    const response = await fetch(SUBGRAPH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Subgraph HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.errors) {
+      return new Map()
+    }
+
+    const vaults = data.data?.vaults || []
+    const vaultMap = new Map<string, SubgraphVault>()
+    
+    vaults.forEach((vault: SubgraphVault) => {
+      if (vault.id) {
+        vaultMap.set(vault.id.toLowerCase(), vault)
+      }
+    })
+
+    return vaultMap
+  } catch (error) {
+    return new Map()
+  }
+}
+
+/**
+ * Fetches Aqua pairs from subgraph - this is the source of truth for which vaults are active
+ */
+async function fetchAquaPairs(): Promise<AquaPair[]> {
+  try {
+    // Use pagination to fetch all pairs (subgraph default limit is usually 100)
+    // Fetch in batches of 1000 to ensure we get all pairs
+    const query = `
+      {
+        aquaPairs(first: 1000, orderBy: id, orderDirection: asc) {
+          id
+          txid
+          token0
+          token1
+          feeBps
+          vault
+          pairHash
+        }
+      }
+    `
+
+    const response = await fetch(SUBGRAPH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Subgraph HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.errors) {
+      return []
+    }
+
+    const pairs = data.data?.aquaPairs || []
+
+    return pairs
+  } catch (error) {
+    return []
+  }
+}
+
 async function fetchProVaults(): Promise<ProVaultResponse[]> {
   if (!STATS_API_BASE_URL) {
-    console.warn("VITE_STATS_API_BASE_URL not set")
     return []
   }
 
@@ -194,14 +336,12 @@ async function fetchProVaults(): Promise<ProVaultResponse[]> {
     }
     return await response.json()
   } catch (error) {
-    console.error("Error fetching pro vaults:", error)
     return []
   }
 }
 
 async function fetchAvailableTokens(): Promise<AvailableTokenResponse[]> {
   if (!STATS_API_BASE_URL) {
-    console.warn("VITE_STATS_API_BASE_URL not set")
     return []
   }
 
@@ -213,19 +353,16 @@ async function fetchAvailableTokens(): Promise<AvailableTokenResponse[]> {
     const data = await response.json()
     // Ensure we return an array
     if (!Array.isArray(data)) {
-      console.warn('[vaultService] available-tokens API did not return an array:', typeof data, data)
       return []
     }
     return data
   } catch (error) {
-    console.error("Error fetching available tokens:", error)
     return []
   }
 }
 
 async function fetchStrategies(): Promise<any[]> {
   if (!STATS_API_BASE_URL) {
-    console.warn("VITE_STATS_API_BASE_URL not set")
     return []
   }
 
@@ -237,7 +374,6 @@ async function fetchStrategies(): Promise<any[]> {
     const result = await response.json()
     return result?.data || []
   } catch (error) {
-    console.error("Error fetching strategies:", error)
     return []
   }
 }
@@ -284,22 +420,46 @@ function normalizeVaultAddress(vault: ProVaultResponse): string {
 }
 
 /**
- * Aggregates vault data from all available API endpoints
+ * Aggregates vault data from all available sources:
+ * 1. Subgraph (aqua pairs) - SOURCE OF TRUTH for vault list
+ * 2. Stats API (metrics and analytics)
  */
 export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
-  const [proVaults, availableTokens, strategies] = await Promise.all([
+  // Fetch subgraph pairs first - this determines which vaults we show
+  const [aquaPairs, proVaults, availableTokens, strategies] = await Promise.all([
+    fetchAquaPairs(),
     fetchProVaults(),
     fetchAvailableTokens(),
     fetchStrategies(),
   ])
 
-  console.log('[vaultService] Fetched data:', {
-    proVaults: proVaults?.length || 0,
-    availableTokens: availableTokens?.length || 0,
-    strategies: strategies?.length || 0,
-    availableTokensType: typeof availableTokens,
-    availableTokensIsArray: Array.isArray(availableTokens),
+  // Extract unique vault addresses from subgraph pairs
+  // Store both lowercase (for matching) and original (for display)
+  const vaultAddressesFromSubgraph = new Set<string>()
+  const vaultAddressOriginalMap = new Map<string, string>() // lowercase -> original
+  const pairsByVault = new Map<string, AquaPair[]>()
+  
+  aquaPairs.forEach((pair) => {
+    // Store original address from subgraph
+    const originalAddress = pair.vault?.trim()
+    if (!originalAddress) {
+      return
+    }
+    
+    // Normalize to lowercase for consistent matching
+    const vaultAddressLower = originalAddress.toLowerCase()
+    
+    vaultAddressesFromSubgraph.add(vaultAddressLower)
+    vaultAddressOriginalMap.set(vaultAddressLower, originalAddress)
+    
+    if (!pairsByVault.has(vaultAddressLower)) {
+      pairsByVault.set(vaultAddressLower, [])
+    }
+    pairsByVault.get(vaultAddressLower)!.push(pair)
   })
+
+  // Fetch vault data from subgraph for all vaults with pairs
+  const subgraphVaults = await fetchVaultsFromSubgraph(Array.from(vaultAddressesFromSubgraph))
 
   // Ensure availableTokens is an array
   const safeAvailableTokens = Array.isArray(availableTokens) ? availableTokens : []
@@ -310,13 +470,16 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   // Create a map of vaults by address for quick lookup
   const vaultMap = new Map<string, AggregatedVault>()
 
-  // Process pro vaults (primary source)
-  const filteredProVaults = proVaults.filter((vault) => vault.name?.startsWith(VAULT_NAME_PREFIX))
-  console.log('[vaultService] Pro vaults filtered by prefix:', {
-    total: proVaults.length,
-    filtered: filteredProVaults.length,
-    prefix: VAULT_NAME_PREFIX,
-    sampleNames: proVaults.slice(0, 3).map(v => v.name),
+  // Process pro vaults - FILTER BY SUBGRAPH ADDRESSES instead of name prefix
+  const filteredProVaults = proVaults.filter((vault) => {
+    const address = normalizeVaultAddress(vault)
+    if (!address) {
+      return false
+    }
+    const addressLower = address.toLowerCase().trim()
+    const isMatch = vaultAddressesFromSubgraph.has(addressLower)
+    
+    return isMatch
   })
 
   filteredProVaults.forEach((vault) => {
@@ -413,7 +576,11 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       // Extract APY
       const apy = extractAPY(vault.apy || vault.vaultAnalytics?.apy)
 
-      vaultMap.set(address.toLowerCase(), {
+      // Get Aqua pairs for this vault from subgraph
+      const addressLower = address.toLowerCase()
+      const aquaPairs = pairsByVault.get(addressLower) || []
+
+      vaultMap.set(addressLower, {
         address,
         name: vault.name,
         chainId,
@@ -437,13 +604,18 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
         managementFee: vault.managementFee,
         performanceFee: vault.performanceFee,
         vaultAnalytics: vault.vaultAnalytics,
+        aquaPairs, // Add Aqua pairs from subgraph
       })
     })
 
   // Enhance with data from available tokens (for metrics and additional token info)
+  // Only process strategies that match vault addresses from subgraph
   safeAvailableTokens.forEach((tokenData) => {
     tokenData.strategies
-      .filter((strategy) => strategy.name?.startsWith(VAULT_NAME_PREFIX))
+      .filter((strategy) => {
+        const address = strategy.vault_address?.toLowerCase()
+        return address && vaultAddressesFromSubgraph.has(address)
+      })
       .forEach((strategy) => {
         const address = strategy.vault_address?.toLowerCase()
         if (!address || !vaultMap.has(address)) return
@@ -498,8 +670,12 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
   })
 
   // Enhance with data from strategies endpoint (fallback)
+  // Only process strategies that match vault addresses from subgraph
   strategies
-    .filter((strategy: any) => strategy.name?.startsWith(VAULT_NAME_PREFIX))
+    .filter((strategy: any) => {
+      const address = (strategy.vault_address || strategy.position_address)?.toLowerCase()
+      return address && vaultAddressesFromSubgraph.has(address)
+    })
     .forEach((strategy: any) => {
       const address = (strategy.vault_address || strategy.position_address)?.toLowerCase()
       if (!address) return
@@ -507,6 +683,8 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       if (!vaultMap.has(address)) {
         // Create new vault entry if it doesn't exist
         const chainId = normalizeChainId(strategy.chain)
+        const aquaPairs = pairsByVault.get(address) || []
+        
         vaultMap.set(address, {
           address: strategy.vault_address || strategy.position_address,
           name: strategy.name,
@@ -518,6 +696,7 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
           apy: extractAPY(strategy.metrics?.vault_analysis?.apy),
           tokens: extractTokensFromDeposits(strategy.metrics?.vault_analysis?.deposits),
           vaultAnalytics: strategy.metrics?.vault_analysis,
+          aquaPairs, // Add Aqua pairs from subgraph
         })
       } else {
         // Enhance existing vault
@@ -542,12 +721,141 @@ export async function fetchAggregatedVaults(): Promise<AggregatedVault[]> {
       }
     })
 
-  const result = Array.from(vaultMap.values())
-  console.log('[vaultService] Final aggregated vaults:', {
-    count: result.length,
-    addresses: result.map(v => v.address),
-    names: result.map(v => v.name),
+  // IMPORTANT: Create vault entries for vaults that exist in subgraph but not in API Stats
+  // This ensures all vaults with pairs are shown, even if they don't have stats yet
+  vaultAddressesFromSubgraph.forEach((vaultAddressLower) => {
+    if (!vaultMap.has(vaultAddressLower)) {
+      const originalAddress = vaultAddressOriginalMap.get(vaultAddressLower) || vaultAddressLower
+      const subgraphVault = subgraphVaults.get(vaultAddressLower)
+      
+      const aquaPairs = pairsByVault.get(vaultAddressLower) || []
+      
+      // Extract tokens from subgraph vault data (preferred) or pairs (fallback)
+      const tokens: VaultToken[] = []
+      const seenAddresses = new Set<string>()
+      
+      // Priority 1: Use depositAssets or assets from subgraph vault
+      if (subgraphVault) {
+        const assetAddresses = subgraphVault.depositAssets || subgraphVault.assets || []
+        assetAddresses.forEach((addr) => {
+          const addrLower = addr.toLowerCase()
+          if (!seenAddresses.has(addrLower)) {
+            seenAddresses.add(addrLower)
+            const tokenInfo = tokenInfoMap.get(addrLower)
+            tokens.push(
+              tokenInfo || {
+                symbol: '',
+                name: '',
+                address: addr,
+                decimals: 18,
+              }
+            )
+          }
+        })
+      }
+      
+      // Priority 2: Extract from pairs if no tokens from subgraph vault
+      if (tokens.length === 0) {
+        aquaPairs.forEach((pair) => {
+          // Add token0
+          const token0Lower = pair.token0.toLowerCase()
+          if (!seenAddresses.has(token0Lower)) {
+            seenAddresses.add(token0Lower)
+            const tokenInfo = tokenInfoMap.get(token0Lower)
+            tokens.push(
+              tokenInfo || {
+                symbol: '',
+                name: '',
+                address: pair.token0,
+                decimals: 18,
+              }
+            )
+          }
+          
+          // Add token1
+          const token1Lower = pair.token1.toLowerCase()
+          if (!seenAddresses.has(token1Lower)) {
+            seenAddresses.add(token1Lower)
+            const tokenInfo = tokenInfoMap.get(token1Lower)
+            tokens.push(
+              tokenInfo || {
+                symbol: '',
+                name: '',
+                address: pair.token1,
+                decimals: 18,
+              }
+            )
+          }
+        })
+      }
+      
+      // Use name from subgraph vault if available, otherwise fallback
+      const vaultName = subgraphVault?.name || `Vault ${originalAddress.slice(0, 6)}...${originalAddress.slice(-4)}`
+      
+      vaultMap.set(vaultAddressLower, {
+        address: originalAddress, // Use original address from subgraph
+        name: vaultName,
+        chainId: BASE_CHAIN_ID,
+        tokens: tokens.length > 0 ? tokens : undefined,
+        depositFee: subgraphVault?.depositFee,
+        withdrawFee: subgraphVault?.withdrawFee,
+        managementFee: subgraphVault?.managementFee,
+        performanceFee: subgraphVault?.performanceFee,
+        pricePerShare: subgraphVault?.pricePerShare,
+        aquaPairs,
+      })
+    } else {
+      // Enhance existing vault with subgraph data if available
+      const vault = vaultMap.get(vaultAddressLower)!
+      const subgraphVault = subgraphVaults.get(vaultAddressLower)
+      
+      if (subgraphVault) {
+        // Update name if missing or use subgraph name if better
+        if (!vault.name || vault.name.startsWith('Vault ')) {
+          vault.name = subgraphVault.name || vault.name
+        }
+        
+        // Update fees if missing
+        if (!vault.depositFee && subgraphVault.depositFee) {
+          vault.depositFee = subgraphVault.depositFee
+        }
+        if (!vault.withdrawFee && subgraphVault.withdrawFee) {
+          vault.withdrawFee = subgraphVault.withdrawFee
+        }
+        if (!vault.managementFee && subgraphVault.managementFee) {
+          vault.managementFee = subgraphVault.managementFee
+        }
+        if (!vault.performanceFee && subgraphVault.performanceFee) {
+          vault.performanceFee = subgraphVault.performanceFee
+        }
+        
+        // Update pricePerShare if missing
+        if (!vault.pricePerShare && subgraphVault.pricePerShare) {
+          vault.pricePerShare = subgraphVault.pricePerShare
+        }
+        
+        // Enhance tokens from subgraph vault if available
+        if (subgraphVault.depositAssets || subgraphVault.assets) {
+          const assetAddresses = subgraphVault.depositAssets || subgraphVault.assets || []
+          const seenAddresses = new Set((vault.tokens || []).map(t => t.address.toLowerCase()))
+          
+          assetAddresses.forEach((addr) => {
+            const addrLower = addr.toLowerCase()
+            if (!seenAddresses.has(addrLower)) {
+              seenAddresses.add(addrLower)
+              const tokenInfo = tokenInfoMap.get(addrLower)
+              if (tokenInfo) {
+                if (!vault.tokens) vault.tokens = []
+                vault.tokens.push(tokenInfo)
+              }
+            }
+          })
+        }
+      }
+    }
   })
+
+  const result = Array.from(vaultMap.values())
 
   return result
 }

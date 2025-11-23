@@ -21,7 +21,11 @@ export function useVaultUserShares({
   const { address: userAddress } = useAccount()
 
   // Read user shares from vault
-  const { data: sharesRaw, isLoading: isLoadingShares } = useReadContract({
+  const { 
+    data: sharesRaw, 
+    isLoading: isLoadingShares,
+    refetch: refetchShares 
+  } = useReadContract({
     address: vaultAddress,
     abi: studioProV1ABI,
     functionName: 'balanceOf',
@@ -78,6 +82,7 @@ export function useVaultUserShares({
   return {
     userShares,
     isLoading: isLoadingShares,
+    refetchShares, // Expose refetch function to manually refresh shares balance
   }
 }
 

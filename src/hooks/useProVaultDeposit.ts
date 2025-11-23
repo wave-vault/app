@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { erc20ABI } from '@factordao/contracts'
 import { ChainId } from '@factordao/sdk'
-import { StudioProVault, StudioProVaultStats } from '@factordao/sdk-studio'
+import { StudioProVault } from '@factordao/sdk-studio'
 // Type definition for token metadata
 type TokenMetadata = {
   address: string
@@ -105,23 +105,10 @@ export function useProVaultDeposit({
         receiverAddress,
       }
 
-      // Handle deposit strategy retrieval with error handling
-      let depositData
-      try {
-        const proVaultStats = new StudioProVaultStats({
-          chainId: ChainId.BASE,
-          vaultAddress: vaultAddress as Address,
-          environment: environment,
-          jsonRpcUrl: getBaseRpcUrl(),
-        })
-        await proVaultStats.getDepositStrategy() // Strategy fetched but not used
-
-        // Use standard depositAsset method with the strategy info
-        depositData = proVault.depositAsset(payload)
-      } catch (statsError) {
-        // Fallback to direct deposit without strategy info
-        depositData = proVault.depositAsset(payload)
-      }
+      // Use depositAssetAndExecute to automatically execute deposit strategy
+      // This will execute any configured deposit strategy (e.g., publishPairs for Aqua)
+      // If no strategy is configured, it behaves like a regular deposit
+      const depositData = proVault.depositAssetAndExecute(payload)
       const hash = await sendTransactionAsync({
         ...depositData,
         chainId: BASE_CHAIN_ID,
@@ -150,7 +137,6 @@ export function useProVaultDeposit({
   return {
     handleDepositWithApproval,
     isLoading,
-    steps,
+    steps, // Expose steps state for stepper UI
   }
 }
-

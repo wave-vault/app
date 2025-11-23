@@ -32,9 +32,10 @@ interface VaultActionsProps {
   vault: Vault
   mode: "deposit" | "withdraw"
   availableTokens: Token[]
+  onBalanceUpdate?: () => void // Callback to refresh balances after deposit/withdraw
 }
 
-export function VaultActions({ vault, mode, availableTokens }: VaultActionsProps) {
+export function VaultActions({ vault, mode, availableTokens, onBalanceUpdate }: VaultActionsProps) {
   if (availableTokens.length === 0) {
     return (
       <div className="p-6 text-center">
@@ -46,9 +47,9 @@ export function VaultActions({ vault, mode, availableTokens }: VaultActionsProps
   }
 
   if (mode === "deposit") {
-    return <Deposit vault={vault} availableTokens={availableTokens} />
+    return <Deposit vault={vault} availableTokens={availableTokens} onBalanceUpdate={onBalanceUpdate} />
   }
 
-  return <Withdraw vault={vault} availableTokens={availableTokens} />
+  return <Withdraw vault={vault} availableTokens={availableTokens} onBalanceUpdate={onBalanceUpdate} />
 }
 

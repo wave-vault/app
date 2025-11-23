@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAccount } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CheckCircle2, XCircle, Circle } from 'lucide-react'
 import { Address, createPublicClient, erc20Abi, formatUnits, parseUnits, http, publicActions } from 'viem'
 import { base } from 'viem/chains'
 import { StudioProVault } from '@factordao/sdk-studio'
@@ -16,7 +16,7 @@ import { ActionPreview } from './ActionPreview'
 import { PercentageSelector } from './PercentageSelector'
 import { WalletBalance } from './WalletBalance'
 import { environment } from '@/lib/constants/dev'
-import { getBaseRpcUrl } from '@/lib/constants/rpc'
+import { getBaseRpcUrl, BASE_CHAIN_ID } from '@/lib/constants/rpc'
 
 interface Token {
   address: string
@@ -42,10 +42,11 @@ interface Vault {
 interface DepositProps {
   vault: Vault
   availableTokens: Token[]
+  onBalanceUpdate?: () => void // Callback to refresh balances after deposit
 }
 
 
-export function Deposit({ vault, availableTokens }: DepositProps) {
+export function Deposit({ vault, availableTokens, onBalanceUpdate }: DepositProps) {
   const { address } = useAccount()
   const { openConnectModal } = useConnectModal()
   const [depositAmount, setDepositAmount] = useState('')
@@ -56,9 +57,14 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
   const [balanceError, setBalanceError] = useState(false)
   const [depositEstimate, setDepositEstimate] = useState<StudioProVaultPreviewDespositResult | null>(null)
 
+  // useProVaultDeposit uses depositAssetAndExecute which automatically:
+  // 1. Deposits the user's tokens into the vault
+  // 2. Executes any configured deposit strategy (e.g., publishPairs for Aqua vaults)
+  // This ensures liquidity is updated on Aqua protocol after each deposit
   const {
     handleDepositWithApproval,
     isLoading,
+    steps, // Steps state for stepper UI
   } = useProVaultDeposit({
     vaultAddress: vault.address as Address,
     token: token
@@ -72,25 +78,45 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
     amount: depositAmount,
     receiverAddress: address as Address,
     onSuccess: () => {
+      // Refresh token balance
       refreshBalance()
+      // Refresh shares balance
+      onBalanceUpdate?.()
+      // Clear deposit amount
       setDepositAmount('')
+      // Reset steps after showing success for 2 seconds
+      setTimeout(() => {
+        // Steps will be reset when user starts a new deposit
+      }, 2000)
     },
   })
 
-  // Set initial token
+  // Set initial token ONLY when depositTokens first loads
   useEffect(() => {
     if (availableTokens && availableTokens.length > 0 && !token) {
       setToken(availableTokens[0])
     }
   }, [availableTokens, token])
 
+  // Manual refresh function for after deposit
   const refreshBalance = useCallback(() => {
-    setBalanceRefreshTrigger((prev) => prev + 1)
+    setBalanceRefreshTrigger(prev => prev + 1)
   }, [])
 
-  // Fetch balance
+  // Determine target chain from vault chainId
+  const targetChain = useMemo(() => {
+    // For now, we only support Base chain (8453)
+    // If vault is on Base, use base chain config
+    if (vault.chainId === BASE_CHAIN_ID || vault.chainId === 8453) {
+      return base
+    }
+    // Fallback to base if chainId is not recognized
+    return base
+  }, [vault.chainId])
+
+  // ✅ Fetch balance ONLY when token address or wallet address changes - exactly like reference
   useEffect(() => {
-    if (!token?.address || !address) {
+    if (!token?.address || !address || !vault.chainId || !targetChain) {
       return
     }
 
@@ -98,20 +124,23 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
 
     const fetchBalance = async (retryCount = 0) => {
       const MAX_RETRIES = 2
-
+      
       try {
+        // Reset balance immediately to avoid showing stale data
         setTokenBalance('0')
         setBalanceError(false)
         setIsLoadingBalance(true)
         const rpcUrl = getBaseRpcUrl()
 
+        // Create a client connected to the correct chain with longer timeout
         const client = createPublicClient({
-          chain: base,
+          chain: targetChain,
           transport: http(rpcUrl, {
-            timeout: 30_000,
+            timeout: 30_000, // 30 seconds timeout
           }),
         }).extend(publicActions)
 
+        // Read the ERC20 token balance
         const balance = await client.readContract({
           address: token.address as Address,
           abi: erc20Abi,
@@ -120,16 +149,21 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
         })
 
         if (!cancelled) {
+          // Format the balance with correct decimals
+          // formatUnits returns a string, which we keep as string to avoid precision issues
           const formattedBalance = formatUnits(balance as bigint, token.decimals || 18)
           setTokenBalance(formattedBalance)
           setBalanceError(false)
         }
       } catch (error: any) {
         if (!cancelled) {
+          // Retry logic for timeout errors
           if (retryCount < MAX_RETRIES && error?.message?.includes('timeout')) {
-            await new Promise((resolve) => setTimeout(resolve, 1000))
+            await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1s before retry
             return fetchBalance(retryCount + 1)
           }
+          
+          // If all retries failed or non-timeout error, show 0 balance
           setTokenBalance('0')
           setBalanceError(true)
         }
@@ -145,7 +179,18 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
     return () => {
       cancelled = true
     }
-  }, [token?.address, address, token?.decimals, balanceRefreshTrigger])
+  }, [token?.address, address, vault.chainId, targetChain, token?.decimals, balanceRefreshTrigger])
+
+  // Format balance as number for calculations
+  // tokenBalance is already formatted with correct decimals from formatUnits
+  // Convert to number for calculations, but preserve precision
+  const formattedBalance = useMemo(() => {
+    if (!tokenBalance || tokenBalance === '0') return 0
+    // Parse the string balance to number
+    // formatUnits already handled the decimals correctly based on token.decimals
+    const num = parseFloat(tokenBalance)
+    return isNaN(num) ? 0 : num
+  }, [tokenBalance])
 
   // Debounced deposit estimate
   useEffect(() => {
@@ -157,7 +202,7 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
     const timeoutId = setTimeout(async () => {
       try {
         const proVault = new StudioProVault({
-          chainId: 8453, // BASE
+          chainId: vault.chainId || BASE_CHAIN_ID,
           vaultAddress: vault.address as Address,
           environment: environment,
           jsonRpcUrl: getBaseRpcUrl(),
@@ -175,9 +220,8 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
     return () => {
       clearTimeout(timeoutId)
     }
-  }, [depositAmount, token?.address, token?.decimals, vault.address])
+  }, [depositAmount, token?.address, token?.decimals, vault.address, vault.chainId])
 
-  const formattedBalance = parseFloat(tokenBalance || '0')
 
   const denominatorDecimals = useMemo(() => {
     if (!vault.metadata?.assetDenominatorAddress || !vault.tokens) return 18
@@ -260,15 +304,14 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
         ) : balanceError ? (
           <div className="flex items-center gap-2">
             <span className="text-sm text-yellow-600 dark:text-yellow-500">Wallet balance: ~</span>
-            <span className="text-xs text-yellow-600 dark:text-yellow-500" title="Could not fetch balance from RPC">
-              ⚠️
-            </span>
+            <span className="text-xs text-yellow-600 dark:text-yellow-500" title="Could not fetch balance from RPC">⚠️</span>
           </div>
         ) : (
           <WalletBalance
-            balance={formattedBalance}
-            tokenSymbol={token?.symbol || availableTokens?.[0]?.symbol || ''}
+            balance={tokenBalance} // Pass as string to preserve precision
+            tokenSymbol={token?.symbol || availableTokens?.[0]?.symbol || 'FCTR'}
             label="Wallet balance:"
+            decimals={token?.decimals} // Pass decimals for proper formatting
           />
         )}
       </div>
@@ -287,7 +330,19 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
 
         <PercentageSelector
           onPercentageChange={(percentage) => {
-            setDepositAmount((formattedBalance * (percentage / 100)).toString())
+            // Calculate amount based on percentage of balance
+            // formattedBalance is already calculated with correct decimals from formatUnits
+            const amount = formattedBalance * (percentage / 100)
+            
+            // Format to string, preserving appropriate decimal places
+            // For tokens with 6 decimals (USDC), show up to 6 decimals
+            // For tokens with 18 decimals (WETH), show up to 8 decimals for readability
+            const tokenDecimals = token?.decimals || 18
+            const maxDecimals = tokenDecimals <= 6 ? 6 : 8
+            
+            // Convert to string and remove trailing zeros
+            const amountStr = amount.toFixed(maxDecimals)
+            setDepositAmount(parseFloat(amountStr).toString())
           }}
         />
       </div>
@@ -302,6 +357,87 @@ export function Deposit({ vault, availableTokens }: DepositProps) {
           sharesString={formatUnits(depositEstimate?.shareAmountBN as any, denominatorDecimals)}
           rawValue={formatUnits(BigInt(depositEstimate?.shareAmountBN || '0'), 18)}
         />
+      )}
+
+      {/* Deposit Stepper - Shows approve and deposit steps */}
+      {(isLoading || steps.approve !== 'idle' || steps.deposit !== 'idle') && (
+        <div className="space-y-2 p-4 rounded-lg bg-muted/30 border border-border/50">
+          <div className="text-xs font-medium text-muted-foreground mb-2">Transaction Steps</div>
+          
+          {/* Step 1: Approve */}
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {steps.approve === 'loading' && (
+                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              )}
+              {steps.approve === 'success' && (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              )}
+              {steps.approve === 'error' && (
+                <XCircle className="h-4 w-4 text-red-500" />
+              )}
+              {steps.approve === 'idle' && (
+                <Circle className="h-4 w-4 text-muted-foreground/50" />
+              )}
+            </div>
+            <div className="flex-1">
+              <div className={`text-sm font-medium ${
+                steps.approve === 'loading' ? 'text-primary' :
+                steps.approve === 'success' ? 'text-green-500' :
+                steps.approve === 'error' ? 'text-red-500' :
+                'text-muted-foreground'
+              }`}>
+                Approve {token?.symbol || 'Token'}
+              </div>
+              {steps.approve === 'loading' && (
+                <div className="text-xs text-muted-foreground">Waiting for approval...</div>
+              )}
+              {steps.approve === 'success' && (
+                <div className="text-xs text-green-500/70">Approved</div>
+              )}
+              {steps.approve === 'error' && (
+                <div className="text-xs text-red-500/70">Approval failed</div>
+              )}
+            </div>
+          </div>
+
+          {/* Step 2: Deposit */}
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              {steps.deposit === 'loading' && (
+                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              )}
+              {steps.deposit === 'success' && (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              )}
+              {steps.deposit === 'error' && (
+                <XCircle className="h-4 w-4 text-red-500" />
+              )}
+              {steps.deposit === 'idle' && (
+                <Circle className="h-4 w-4 text-muted-foreground/50" />
+              )}
+            </div>
+            <div className="flex-1">
+              <div className={`text-sm font-medium ${
+                steps.deposit === 'loading' ? 'text-primary' :
+                steps.deposit === 'success' ? 'text-green-500' :
+                steps.deposit === 'error' ? 'text-red-500' :
+                'text-muted-foreground'
+              }`}>
+                Deposit
+              </div>
+              {steps.deposit === 'loading' && (
+                <div className="text-xs text-muted-foreground">Depositing tokens...</div>
+              )}
+              {steps.deposit === 'success' && (
+                <div className="text-xs text-green-500/70">Deposit successful</div>
+              )}
+              {steps.deposit === 'error' && (
+                <div className="text-xs text-red-500/70">Deposit failed</div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <Button

@@ -284,7 +284,6 @@ export function TokenSelector({ value, onChange, className, showBalance = true, 
         a.symbol.localeCompare(b.symbol)
       )
     } catch (error) {
-      console.error('[TokenSelector] Error loading tokens:', error)
       // Fallback to whitelist only if tokenlist fails
       return validWhitelistedTokens
         .filter(token => {
@@ -433,7 +432,7 @@ export function TokenSelector({ value, onChange, className, showBalance = true, 
       setCopiedAddress(address)
       setTimeout(() => setCopiedAddress(null), 2000)
     } catch (err) {
-      console.error('Failed to copy address:', err)
+      // Failed to copy address
     }
   }
 

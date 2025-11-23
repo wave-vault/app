@@ -91,18 +91,8 @@ export function TokenMultiSelect({ selected, onChange }: TokenMultiSelectProps) 
         }
       })
       
-      // Debug in development
-      if (import.meta.env.DEV) {
-        console.log('[TokenMultiSelect] ChainId:', chainId)
-        console.log('[TokenMultiSelect] Whitelisted tokens:', validWhitelistedTokens.length)
-        console.log('[TokenMultiSelect] Found tokens from tokenlist:', foundTokens.length)
-        console.log('[TokenMultiSelect] Token symbols:', foundTokens.map(t => t.symbol))
-        console.log('[TokenMultiSelect] All tokens from tokenlist:', allTokens.length)
-      }
-      
       return foundTokens
     } catch (error) {
-      console.error('[TokenMultiSelect] Error loading tokens:', error)
       // Fallback to whitelist only if tokenlist fails
       return validWhitelistedTokens.map((token) => ({
         symbol: token.symbol,

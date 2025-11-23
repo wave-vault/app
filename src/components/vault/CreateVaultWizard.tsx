@@ -17,6 +17,11 @@ import { useConnectModal } from "@rainbow-me/rainbowkit"
 import { getBaseTokenByAddress } from "@/lib/constants/baseTokens"
 import { X } from "lucide-react"
 import { FactorTokenlist } from "@factordao/tokenlist"
+import { DeploymentProgressModal } from "@/components/vault/DeploymentProgressModal"
+import { useCreateVaultDeployment } from "@/hooks/useCreateVaultDeployment"
+import { Address } from "viem"
+import { useNavigate } from "react-router-dom"
+import { useToast } from "@/hooks/use-toast"
 
 const VAULT_NAME_PREFIX = "ethGlobal - wave: "
 
@@ -24,10 +29,10 @@ const vaultSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   image: z.string().url().optional().or(z.literal("")),
-  depositFee: z.number().min(0).max(5),
-  withdrawFee: z.number().min(0).max(5),
-  managementFee: z.number().min(0).max(2),
-  performanceFee: z.number().min(0).max(20),
+  depositFee: z.number().min(0).max(100),
+  withdrawFee: z.number().min(0).max(100),
+  managementFee: z.number().min(0).max(100),
+  performanceFee: z.number().min(0).max(100),
   whitelistedTokens: z.array(z.string()).min(2, "Select at least 2 tokens"),
   selectedPairs: z.array(z.object({
     pairId: z.string(),
@@ -51,8 +56,18 @@ export function CreateVaultWizard() {
   const [currentStep, setCurrentStep] = useState(1)
   const [selectedTokens, setSelectedTokens] = useState<string[]>([])
   const [selectedPairs, setSelectedPairs] = useState<SelectedPair[]>([])
-  const { isConnected, chainId = 8453 } = useAccount()
+  const [isDeploymentModalOpen, setIsDeploymentModalOpen] = useState(false)
+  const { isConnected, chainId = 8453, address: userAddress } = useAccount()
   const { openConnectModal } = useConnectModal()
+  const navigate = useNavigate()
+  const { toast } = useToast()
+
+
+  // Alchemy API key from environment
+  const alchemyApiKey = import.meta.env.VITE_ALCHEMY_API_KEY || ''
+  
+  // Fee receiver address (can be configured)
+  const feeReceiverAddress = (userAddress || '0x917b3F413FCD5ABAFbE089427Bab65b11d482C4c') as Address
 
   const {
     register,
@@ -75,25 +90,106 @@ export function CreateVaultWizard() {
     },
   })
 
+  // Watch only specific fields to avoid unnecessary re-renders
   const watchedName = watch("name")
+  const watchedDescription = watch("description")
+  const watchedImage = watch("image")
+  const watchedDepositFee = watch("depositFee")
+  const watchedWithdrawFee = watch("withdrawFee")
+  const watchedManagementFee = watch("managementFee")
+  const watchedPerformanceFee = watch("performanceFee")
+  const watchedWhitelistedTokens = watch("whitelistedTokens")
+  const watchedSelectedPairs = watch("selectedPairs")
+
   const displayName = watchedName
     ? `${VAULT_NAME_PREFIX}${watchedName}`
     : VAULT_NAME_PREFIX
 
-  const onSubmit = async (data: VaultFormData) => {
+  const onSubmit = async (_data: VaultFormData) => {
     // Check if wallet is connected
     if (!isConnected && openConnectModal) {
       openConnectModal()
       return
     }
 
-    // Here you would integrate with SDK and deploy vault
-    console.log("Vault data:", {
-      ...data,
-      name: `${VAULT_NAME_PREFIX}${data.name}`,
-    })
-    // TODO: Implement vault deployment logic
+    if (!alchemyApiKey) {
+      toast({
+        title: "Configuration Error",
+        description: "Alchemy API key not configured. Please set VITE_ALCHEMY_API_KEY in your environment.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Open deployment modal
+    setIsDeploymentModalOpen(true)
   }
+
+  const onSubmitError = () => {
+    toast({
+      title: "Form Validation Error",
+      description: "Please check all required fields and fix any errors.",
+      variant: "destructive",
+    })
+  }
+
+  const handleDeploymentComplete = (vaultAddress: string) => {
+    if (!vaultAddress) {
+      toast({
+        title: "Deployment Error",
+        description: "Vault address not found. Please check the transaction.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    toast({
+      title: "Vault Deployed Successfully!",
+      description: `Your vault ${vaultAddress.slice(0, 6)}...${vaultAddress.slice(-4)} will be available shortly. The subgraph is indexing your vault data.`,
+      duration: 8000,
+    })
+    
+    // Close modal and navigate to swap page
+    // Don't navigate to vault page yet as subgraph needs time to index
+      setIsDeploymentModalOpen(false)
+    navigate('/swap')
+  }
+
+  const handleDeploymentModalClose = () => {
+    setIsDeploymentModalOpen(false)
+  }
+  
+  const deploymentConfig = useMemo(() => {
+    const config = {
+      name: `${VAULT_NAME_PREFIX}${watchedName || ''}`,
+      description: watchedDescription || '',
+      image: watchedImage || '',
+      depositFee: watchedDepositFee || 0,
+      withdrawFee: watchedWithdrawFee || 0,
+      managementFee: watchedManagementFee || 0,
+      performanceFee: watchedPerformanceFee || 0,
+      whitelistedTokens: watchedWhitelistedTokens || [],
+      selectedPairs: watchedSelectedPairs || [],
+    }
+    return config
+  }, [
+    watchedName,
+    watchedDescription,
+    watchedImage,
+    watchedDepositFee,
+    watchedWithdrawFee,
+    watchedManagementFee,
+    watchedPerformanceFee,
+    watchedWhitelistedTokens,
+    watchedSelectedPairs,
+  ])
+
+  // Create transaction flow - it will only execute when modal opens and start() is called
+  const transactionFlow = useCreateVaultDeployment({
+    config: deploymentConfig,
+    feeReceiverAddress,
+    alchemyApiKey,
+  })
 
   const nextStep = () => {
     if (currentStep < steps.length) {
@@ -243,7 +339,15 @@ export function CreateVaultWizard() {
   }, [generatePairs, selectedPairs, setValue])
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-6">
+    <>
+      <DeploymentProgressModal
+        isOpen={isDeploymentModalOpen}
+        onClose={handleDeploymentModalClose}
+        transactionFlow={transactionFlow}
+        onComplete={handleDeploymentComplete}
+      />
+      
+      <form onSubmit={handleSubmit(onSubmit, onSubmitError)} className="space-y-6 p-6">
       {/* Progress */}
       <div className="space-y-2">
         <div className="flex justify-between text-sm text-muted-foreground">
@@ -309,7 +413,7 @@ export function CreateVaultWizard() {
               type="number"
               step="0.1"
               min="0"
-              max="5"
+              max="100"
               {...register("depositFee", { valueAsNumber: true })}
             />
             {errors.depositFee && (
@@ -325,7 +429,7 @@ export function CreateVaultWizard() {
               type="number"
               step="0.1"
               min="0"
-              max="5"
+              max="100"
               {...register("withdrawFee", { valueAsNumber: true })}
             />
             {errors.withdrawFee && (
@@ -341,7 +445,7 @@ export function CreateVaultWizard() {
               type="number"
               step="0.1"
               min="0"
-              max="2"
+              max="100"
               {...register("managementFee", { valueAsNumber: true })}
             />
             {errors.managementFee && (
@@ -357,7 +461,7 @@ export function CreateVaultWizard() {
               type="number"
               step="0.1"
               min="0"
-              max="20"
+              max="100"
               {...register("performanceFee", { valueAsNumber: true })}
             />
             {errors.performanceFee && (
@@ -616,12 +720,16 @@ export function CreateVaultWizard() {
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button type="submit" variant="glass-apple">
+          <Button 
+            type="submit" 
+            variant="glass-apple"
+          >
             Deploy Vault
           </Button>
         )}
       </div>
     </form>
+    </>
   )
 }
 
