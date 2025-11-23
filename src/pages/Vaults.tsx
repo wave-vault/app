@@ -777,7 +777,7 @@ export function Vaults() {
                         </div>
                       )}
                       
-                      {/* Name, Address, Protocols, and Fees */}
+                      {/* Name, Address, and Protocols */}
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-base font-bold line-clamp-2 mb-0.5">
                           {displayName}
@@ -786,7 +786,7 @@ export function Vaults() {
                           {vault.address.slice(0, 6)}...{vault.address.slice(-4)}
                         </p>
                         {vault.protocols && vault.protocols.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1.5">
+                          <div className="flex flex-wrap gap-1">
                             {vault.protocols.slice(0, 3).map((protocol, idx) => (
                               <Badge key={idx} variant="outline" className="text-[8px] px-1 py-0.5 h-3.5">
                                 {protocol}
@@ -799,40 +799,41 @@ export function Vaults() {
                             )}
                           </div>
                         )}
-                        {/* Fees Section - Under Name and Address */}
-                        {(vault.managementFee || vault.depositFee || vault.withdrawFee || vault.performanceFee) && (
-                          <div className="space-y-1">
-                            <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">Fees</p>
-                            <div className="flex flex-wrap gap-1">
-                              {vault.managementFee && (
-                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
-                                  <span className="text-muted-foreground">Mgmt:</span>
-                                  <span className="font-semibold">{formatFee(vault.managementFee)}</span>
-                                </div>
-                              )}
-                              {vault.depositFee && (
-                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
-                                  <span className="text-muted-foreground">Dep:</span>
-                                  <span className="font-semibold">{formatFee(vault.depositFee)}</span>
-                                </div>
-                              )}
-                              {vault.withdrawFee && (
-                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
-                                  <span className="text-muted-foreground">Wth:</span>
-                                  <span className="font-semibold">{formatFee(vault.withdrawFee)}</span>
-                                </div>
-                              )}
-                              {vault.performanceFee && (
-                                <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
-                                  <span className="text-muted-foreground">Perf:</span>
-                                  <span className="font-semibold">{formatFee(vault.performanceFee)}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
+
+                    {/* Fees Section - Full Width Below */}
+                    {(vault.managementFee || vault.depositFee || vault.withdrawFee || vault.performanceFee) && (
+                      <div className="space-y-1 pt-2 border-t border-border/20">
+                        <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wide">Fees</p>
+                        <div className="flex flex-wrap gap-1">
+                          {vault.depositFee && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
+                              <span className="text-muted-foreground">Dep:</span>
+                              <span className="font-semibold">{formatFee(vault.depositFee)}</span>
+                            </div>
+                          )}
+                          {vault.withdrawFee && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
+                              <span className="text-muted-foreground">Wth:</span>
+                              <span className="font-semibold">{formatFee(vault.withdrawFee)}</span>
+                            </div>
+                          )}
+                          {vault.performanceFee && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
+                              <span className="text-muted-foreground">Perf:</span>
+                              <span className="font-semibold">{formatFee(vault.performanceFee)}</span>
+                            </div>
+                          )}
+                          {vault.managementFee && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[8px] bg-muted/50 border border-border/30">
+                              <span className="text-muted-foreground">Mgmt:</span>
+                              <span className="font-semibold">{formatFee(vault.managementFee)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                 </CardHeader>
                   
                   <CardContent className="space-y-3 flex-1 flex flex-col px-3 pb-3">

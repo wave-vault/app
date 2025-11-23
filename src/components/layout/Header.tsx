@@ -6,16 +6,23 @@ import { cn } from "@/lib/utils"
 import logoImage from "@/logo/logo.png"
 import { useEffect, useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useAccount } from "wagmi"
+import { useAccount, useSwitchChain } from "wagmi"
 import { useConnectModal } from "@rainbow-me/rainbowkit"
+import { BASE_CHAIN_ID } from "@/lib/constants/rpc"
+import { AlertTriangle } from "lucide-react"
 
 export function Header() {
   const location = useLocation()
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const { isConnected } = useAccount()
+  const { isConnected, chain } = useAccount()
   const { openConnectModal } = useConnectModal()
+  const { switchChain } = useSwitchChain()
+
+  // Check if the connected wallet is on Base network
+  const isOnBaseNetwork = chain?.id === BASE_CHAIN_ID
+  const showNetworkWarning = isConnected && !isOnBaseNetwork
 
   const isActive = (path: string) => location.pathname === path
 
@@ -23,6 +30,12 @@ export function Header() {
     if (!isConnected && openConnectModal) {
       e.preventDefault()
       openConnectModal()
+    }
+  }
+
+  const handleSwitchNetwork = () => {
+    if (switchChain) {
+      switchChain({ chainId: BASE_CHAIN_ID })
     }
   }
 
@@ -105,10 +118,32 @@ export function Header() {
 
           {/* Wallet Connect & Theme Toggle */}
           <div className="flex items-center gap-2">
+            {/* Network Warning Button - Desktop */}
+            {showNetworkWarning && (
+              <Button
+                onClick={handleSwitchNetwork}
+                variant="destructive"
+                size="sm"
+                className="hidden sm:flex items-center gap-2 rounded-full animate-pulse hover:animate-none"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Change Network
+              </Button>
+            )}
             <ThemeToggle />
             <div className="hidden sm:block">
               <ConnectButton />
             </div>
+            {/* Network Warning Button - Mobile */}
+            {showNetworkWarning && (
+              <button
+                onClick={handleSwitchNetwork}
+                className="sm:hidden flex items-center gap-1 h-8 px-2 rounded-lg bg-red-500 dark:bg-red-600 text-white text-xs font-medium animate-pulse hover:animate-none"
+              >
+                <AlertTriangle className="h-3 w-3" />
+                Switch
+              </button>
+            )}
             {/* Compact wallet button for mobile */}
             <div className="sm:hidden">
               <ConnectButton.Custom>
